@@ -1,0 +1,27 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCRJPBPmUU9lxcTv_xKhaOebPhcVJlHtgY",
+  authDomain: "saveup-baa19.firebaseapp.com",
+  projectId: "saveup-baa19",
+  storageBucket: "saveup-baa19.appspot.com",
+  messagingSenderId: "1055270623347",
+  appId: "1:1055270623347:web:b35903159cf2c8f8fe3206",
+  measurementId: "G-RKJTXSY2FW"
+};
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+// Persist auth locally (web & native)
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+const app = firebase.app();
+
+export { app, auth, db, firebase };

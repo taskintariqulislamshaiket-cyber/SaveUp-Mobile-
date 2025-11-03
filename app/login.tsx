@@ -86,6 +86,7 @@ export default function LoginPage() {
     outputRange: ['0deg', '360deg'],
   });
 
+  // ✅ Fixed handleAuth with proper loading control and Firebase delay
   const handleAuth = async () => {
     setError('');
 
@@ -112,10 +113,13 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
-        await signIn(email, password);
+        await signIn(email.trim(), password);
       } else {
-        await signUp(email, password);
+        await signUp(email.trim(), password);
       }
+
+      // ⏳ Wait briefly for Firebase auth state to propagate
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -123,13 +127,15 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error('Auth error:', err);
       setError(err.message || 'Authentication failed');
-      setLoading(false);
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
+    } finally {
+      setLoading(false); // ✅ ensures spinner always stops
     }
   };
 
+  // ✅ Fixed handleGoogleSignIn with guaranteed loading stop
   const handleGoogleSignIn = async () => {
     setError('');
     setLoading(true);
@@ -139,15 +145,20 @@ export default function LoginPage() {
 
     try {
       await signInWithGoogle();
+      // ⏳ Allow Firebase to complete sign-in before UI resumes
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (err: any) {
+      console.error('Google Sign-In error:', err);
       setError(err.message || 'Google Sign-In failed');
-      setLoading(false);
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -362,183 +373,52 @@ export default function LoginPage() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-    minHeight: height,
-  },
-  backgroundCircles: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  circle: {
-    position: 'absolute',
-    borderRadius: 999,
-    opacity: 0.1,
-  },
-  circle1: {
-    width: 300,
-    height: 300,
-    backgroundColor: '#8b5cf6',
-    top: -100,
-    right: -100,
-  },
-  circle2: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#ec4899',
-    bottom: -50,
-    left: -50,
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoContainer: {
-    marginBottom: 20,
-  },
+  container: { flex: 1, backgroundColor: '#0f172a' },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20, minHeight: height },
+  backgroundCircles: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  circle: { position: 'absolute', borderRadius: 999, opacity: 0.1 },
+  circle1: { width: 300, height: 300, backgroundColor: '#8b5cf6', top: -100, right: -100 },
+  circle2: { width: 200, height: 200, backgroundColor: '#ec4899', bottom: -50, left: -50 },
+  headerContainer: { alignItems: 'center', marginBottom: 40 },
+  logoContainer: { marginBottom: 20 },
   logoGradient: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#8b5cf6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 10,
+    width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#8b5cf6', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5,
+    shadowRadius: 16, elevation: 10,
   },
-  title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-    letterSpacing: 1,
-  },
-  tagline: {
-    fontSize: 16,
-    color: '#94a3b8',
-    textAlign: 'center',
-    marginBottom: 4,
-    fontStyle: 'italic',
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#94a3b8',
-    textAlign: 'center',
-  },
-  formContainer: {
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
-  },
-  googleButton: {
-    marginBottom: 20,
-  },
+  title: { fontSize: 48, fontWeight: 'bold', color: '#fff', marginBottom: 8, letterSpacing: 1 },
+  tagline: { fontSize: 16, color: '#94a3b8', textAlign: 'center', marginBottom: 4, fontStyle: 'italic' },
+  subtitle: { fontSize: 18, color: '#94a3b8', textAlign: 'center' },
+  formContainer: { width: '100%', maxWidth: 400, alignSelf: 'center' },
+  googleButton: { marginBottom: 20 },
   googleGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 56,
-    borderRadius: 16,
-    gap: 12,
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56,
+    borderRadius: 16, gap: 12, borderWidth: 2, borderColor: '#e5e7eb',
   },
-  googleText: {
-    color: '#1f2937',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#334155',
-  },
-  dividerText: {
-    color: '#64748b',
-    marginHorizontal: 16,
-    fontSize: 14,
-  },
+  googleText: { color: '#1f2937', fontSize: 16, fontWeight: '600' },
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+  divider: { flex: 1, height: 1, backgroundColor: '#334155' },
+  dividerText: { color: '#64748b', marginHorizontal: 16, fontSize: 14 },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    height: 56,
-    borderWidth: 1,
-    borderColor: '#334155',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 16,
+    marginBottom: 16, paddingHorizontal: 16, height: 56, borderWidth: 1, borderColor: '#334155',
   },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 16,
-  },
-  eyeIcon: {
-    padding: 4,
-  },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, color: '#fff', fontSize: 16 },
+  eyeIcon: { padding: 4 },
   errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ef44441a',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#ef44441a',
+    borderRadius: 12, padding: 12, marginBottom: 16,
   },
-  errorText: {
-    color: '#ef4444',
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  submitButton: {
-    marginTop: 8,
-    marginBottom: 20,
-  },
+  errorText: { color: '#ef4444', marginLeft: 8, fontSize: 14 },
+  submitButton: { marginTop: 8, marginBottom: 20 },
   submitGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 56,
-    borderRadius: 16,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 56, borderRadius: 16, gap: 8,
   },
-  submitText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  toggleContainer: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  toggleText: {
-    color: '#94a3b8',
-    fontSize: 14,
-  },
-  toggleLink: {
-    color: '#8b5cf6',
-    fontWeight: 'bold',
-  },
-  footer: {
-    textAlign: 'center',
-    color: '#64748b',
-    fontSize: 12,
-    marginTop: 32,
-  },
+  submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  toggleContainer: { alignItems: 'center', paddingVertical: 16 },
+  toggleText: { color: '#94a3b8', fontSize: 14 },
+  toggleLink: { color: '#8b5cf6', fontWeight: 'bold' },
+  footer: { textAlign: 'center', color: '#64748b', fontSize: 12, marginTop: 32 },
 });

@@ -1,23 +1,20 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  User,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithCredential,
-} from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../config/firebase-config';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-import { useRouter } from 'expo-router';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+import Constants from 'expo-constants';
+import * as Google from 'expo-auth-session/providers/google';
+import { useRouter } from 'expo-router';
+
+// Firebase (compat)
+import { firebase, db } from '../config/firebase-config';
 
 WebBrowser.maybeCompleteAuthSession();
 
-interface UserProfile {
+export interface UserProfile {
+  existingSavings?: number;
+  existingFDR?: number;
+  otherInvestments?: number;
   userId: string;
   email: string;
   displayName?: string;
@@ -32,8 +29,10 @@ interface UserProfile {
   updatedAt: Date;
 }
 
+type FirebaseUser = firebase.User;
+
 interface AuthContextType {
-  user: User | null;
+  user: FirebaseUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -44,90 +43,103 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };
 
+// === Your confirmed IDs ===
 const GOOGLE_WEB_CLIENT_ID = '1055270623347-2acrv9eu3sb63fne6ru5889marith6ru.apps.googleusercontent.com';
+const GOOGLE_IOS_CLIENT_ID = '1055270623347-80t89vmojq1943cqf1tk02e5ftng9ed0.apps.googleusercontent.com';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const router = useRouter();
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: GOOGLE_WEB_CLIENT_ID,
+  // Expo Go needs proxy; dev build does not
+  const isExpoGo = Constants.appOwnership === 'expo';
+  const useProxy = isExpoGo;
+  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'saveup', useProxy });
+
+  // Request that works on web, Expo Go, and iOS dev build via id_token
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    expoClientId: GOOGLE_WEB_CLIENT_ID,   // Expo Go fallback
+    responseType: 'id_token',
+    redirectUri,
+    scopes: ['profile', 'email'],
+    usePKCE: true,
   });
+
+  const mapDocToProfile = (uid: string, data: any): UserProfile | null => {
+    if (!data) return null;
+    return {
+      userId: uid,
+      email: data.email || '',
+      displayName: data.displayName || data.name || '',
+      photoURL: data.photoURL || '',
+      personalityType: data.personalityType || '',
+      monthlyIncome: data.monthlyIncome || 0,
+      remainingBalanceCurrentMonth: data.remainingBalanceCurrentMonth || 0,
+      salaryDay: data.salaryDay || 1,
+      existingSavings: data.existingSavings || 0,
+      profileComplete: !!data.profileComplete,
+      createdAt: data.createdAt?.toDate?.() || new Date(),
+      updatedAt: data.updatedAt?.toDate?.() || new Date(),
+    };
+  };
 
   const loadUserProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        return {
-          userId,
-          email: data.email || '',
-          displayName: data.displayName || data.name || '',
-          photoURL: data.photoURL || '',
-          personalityType: data.personalityType || '',
-          monthlyIncome: data.monthlyIncome || 0,
-          remainingBalanceCurrentMonth: data.remainingBalanceCurrentMonth || 0,
-          salaryDay: data.salaryDay || 1,
-          existingSavings: data.existingSavings || 0,
-          profileComplete: data.profileComplete || false,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        };
-      }
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (userDoc.exists) return mapDocToProfile(userId, userDoc.data());
       return null;
-    } catch (error) {
-      console.error('Error loading user profile:', error);
+    } catch (e) {
+      console.error('Error loading user profile:', e);
       return null;
     }
   };
 
-  const createUserProfile = async (user: User) => {
+  const createUserProfileIfMissing = async (u: FirebaseUser) => {
     try {
-      const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-
-      if (!userDoc.exists()) {
-        await setDoc(userRef, {
-          userId: user.uid,
-          email: user.email,
-          displayName: user.displayName || '',
-          photoURL: user.photoURL || '',
+      const userRef = db.collection('users').doc(u.uid);
+      const snap = await userRef.get();
+      if (!snap.exists) {
+        await userRef.set({
+          userId: u.uid,
+          email: u.email,
+          displayName: u.displayName || '',
+          photoURL: u.photoURL || '',
+          personalityType: '',
+          monthlyIncome: 0,
+          remainingBalanceCurrentMonth: 0,
+          salaryDay: 1,
+          existingSavings: 0,
           profileComplete: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         });
       }
-    } catch (error) {
-      console.error('Error creating user profile:', error);
+    } catch (e) {
+      console.error('Error creating user profile:', e);
     }
   };
 
   const refreshUserProfile = async () => {
-    if (user) {
-      const profile = await loadUserProfile(user.uid);
-      setUserProfile(profile);
-    }
+    if (!user) return;
+    const p = await loadUserProfile(user.uid);
+    setUserProfile(p);
   };
 
-  // Listen to auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      console.log('🔐 Auth state changed:', currentUser?.email);
-      
+    const unsub = firebase.auth().onAuthStateChanged(async (currentUser) => {
       if (currentUser?.isAnonymous) {
-        await firebaseSignOut(auth);
+        await firebase.auth().signOut();
         setUser(null);
         setUserProfile(null);
         setLoading(false);
@@ -137,143 +149,117 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(currentUser);
 
+      let profileUnsub: undefined | (() => void);
       if (currentUser && currentUser.email) {
-        await createUserProfile(currentUser);
-        const profile = await loadUserProfile(currentUser.uid);
-        console.log('👤 Profile loaded:', profile);
-        setUserProfile(profile);
+        await createUserProfileIfMissing(currentUser);
+        const ref = db.collection('users').doc(currentUser.uid);
+        profileUnsub = ref.onSnapshot(
+          (snap) => setUserProfile(mapDocToProfile(currentUser.uid, snap.data())),
+          (err) => console.error('onSnapshot error:', err)
+        );
       } else {
         setUserProfile(null);
       }
 
       setLoading(false);
       setInitialLoad(false);
+
+      return () => { if (profileUnsub) profileUnsub(); };
     });
 
-    return unsubscribe;
+    return unsub;
   }, []);
 
-  // Handle navigation based on auth state
-  useEffect(() => {
-    if (initialLoad || loading) {
-      console.log('⏳ Still loading...');
-      return;
+  const lastRouteRef = useRef<string | null>(null);
+  const navigateSafely = (path: string) => {
+    if (lastRouteRef.current === path) return;
+    lastRouteRef.current = path;
+    try { router.replace(path); }
+    catch {
+      if (Platform.OS === 'web') (window as any).location.assign(path);
     }
+  };
 
-    console.log('🧭 Navigation check:', {
-      hasUser: !!user,
-      hasPersonality: !!userProfile?.personalityType,
-      isComplete: userProfile?.profileComplete,
-    });
+  const pickNextRoute = (): string => {
+    if (!user) return '/login';
+    if (!userProfile?.personalityType) return '/quiz';
+    if (!userProfile?.profileComplete) return '/profile-setup';
+    return '/(tabs)';
+  };
 
-    const timeoutId = setTimeout(() => {
+  useEffect(() => {
+    if (initialLoad || loading) return;
+    const next = pickNextRoute();
+    navigateSafely(next);
+  }, [user, userProfile, loading, initialLoad]);
+
+  // Handle Google auth result (id_token for Firebase)
+  useEffect(() => {
+    (async () => {
+      if (!response || response.type !== 'success') return;
+      const idToken =
+        (response as any)?.authentication?.idToken ||
+        (response as any)?.params?.id_token;
+      if (!idToken) return;
+
       try {
-        if (!user) {
-          console.log('→ Going to login');
-          router.replace('/login');
-        } else if (!userProfile?.personalityType) {
-          console.log('→ Going to quiz');
-          router.replace('/quiz');
-        } else if (!userProfile?.profileComplete) {
-          console.log('→ Going to profile-setup');
-          router.replace('/profile-setup');
-        } else {
-          console.log('→ Going to dashboard');
-          router.replace('/(tabs)');
-        }
-      } catch (error) {
-        console.error('Navigation error:', error);
+        setLoading(true);
+        const cred = firebase.auth.GoogleAuthProvider.credential(idToken);
+        await firebase.auth().signInWithCredential(cred);
+      } catch (e) {
+        console.error('Google sign-in credential error:', e);
+      } finally {
+        setLoading(false);
       }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [user, userProfile, loading, initialLoad, router]);
-
-  // Google Sign-In
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token);
-      signInWithCredential(auth, credential);
-    }
+    })();
   }, [response]);
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      console.log('🔑 Signing in...');
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log('✅ Sign in successful');
-    } catch (error: any) {
-      console.error('❌ Sign in error:', error);
-      setLoading(false);
-      if (error.code === 'auth/user-not-found') {
-        throw new Error('No account found with this email. Please sign up first.');
-      } else if (error.code === 'auth/wrong-password') {
-        throw new Error('Incorrect password. Please try again.');
-      } else if (error.code === 'auth/invalid-email') {
-        throw new Error('Invalid email address format.');
-      } else {
-        throw new Error(error.message || 'Failed to sign in');
-      }
-    }
-  };
-
-  const signUp = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      console.log('📝 Creating account...');
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await createUserProfile(userCredential.user);
-      console.log('✅ Account created successfully');
-    } catch (error: any) {
-      console.error('❌ Sign up error:', error);
-      setLoading(false);
-      if (error.code === 'auth/email-already-in-use') {
-        throw new Error('This email is already registered. Click "Sign In" below to log in.');
-      } else if (error.code === 'auth/weak-password') {
-        throw new Error('Password should be at least 6 characters.');
-      } else if (error.code === 'auth/invalid-email') {
-        throw new Error('Invalid email address format.');
-      } else {
-        throw new Error(error.message || 'Failed to create account. Please try again.');
-      }
-    }
-  };
 
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      await promptAsync();
+
+      if (Platform.OS === 'web') {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await firebase.auth().signInWithPopup(provider);
+        return;
+      }
+
+      await (promptAsync as any)({ useProxy });
     } catch (error: any) {
+      console.error('Google sign-in error:', error);
+    } finally {
       setLoading(false);
-      throw new Error(error.message || 'Failed to sign in with Google');
     }
   };
 
-  const signOut = async () => {
+  const signIn = async (email: string, password: string) => {
+    setLoading(true);
+    try { await firebase.auth().signInWithEmailAndPassword(email, password); }
+    finally { setLoading(false); }
+  };
+
+  const signUp = async (email: string, password: string) => {
+    setLoading(true);
     try {
-      console.log('🚪 Signing out...');
-      
-      // Sign out from Firebase
-      await firebaseSignOut(auth);
-      
-      // Clear state
+      const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+      if (cred.user) await createUserProfileIfMissing(cred.user);
+    } finally { setLoading(false); }
+  };
+
+  const signOut = async () => {
+    setLoading(true);
+    try {
+      await firebase.auth().signOut();
       setUser(null);
       setUserProfile(null);
-      
-      console.log('✅ Signed out successfully');
-      
-      // Force reload on web to clear all state
+      lastRouteRef.current = null;
+      navigateSafely('/login');
       if (Platform.OS === 'web') {
-        window.location.href = '/login';
-      } else {
-        router.replace('/login');
+        setTimeout(() => {
+          try { (window as any).location.replace('/login'); } catch { (window as any).location.assign('/login'); }
+        }, 0);
       }
-    } catch (error: any) {
-      console.error('❌ Sign out error:', error);
-      throw new Error(error.message || 'Failed to sign out');
-    }
+    } finally { setLoading(false); }
   };
 
   const value: AuthContextType = {

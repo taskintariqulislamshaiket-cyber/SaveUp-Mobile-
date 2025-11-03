@@ -1,0 +1,98 @@
+.
+├── android
+│   ├── app
+│   │   ├── build.gradle
+│   │   ├── debug.keystore
+│   │   ├── proguard-rules.pro
+│   │   └── src
+│   ├── build.gradle
+│   ├── gradle
+│   │   └── wrapper
+│   ├── gradle.properties
+│   ├── gradlew
+│   ├── gradlew.bat
+│   └── settings.gradle
+├── app
+│   ├── (tabs)
+│   │   ├── _layout.tsx
+│   │   ├── expenses.tsx
+│   │   ├── goals.tsx
+│   │   ├── index.tsx
+│   │   ├── insights.tsx
+│   │   └── profile.tsx
+│   ├── _layout.tsx
+│   ├── index.tsx
+│   ├── login.tsx
+│   ├── profile-setup.tsx
+│   └── quiz.tsx
+├── app.json
+├── assets
+│   ├── adaptive-icon.png
+│   ├── favicon.png
+│   ├── icon.png
+│   ├── splash-icon.png
+│   └── splash.png
+├── backups
+│   ├── app.json.20251031110309
+│   └── firebase-config.js.bak
+├── clean_structure.txt
+├── dist
+│   ├── icons
+│   │   ├── icon-192.png
+│   │   └── icon-512.png
+│   ├── manifest.json
+│   └── service-worker.js
+├── eas.json
+├── firestore.rules
+├── index.js
+├── ios
+│   ├── Podfile
+│   ├── Podfile.properties.json
+│   ├── SaveUp
+│   │   ├── AppDelegate.swift
+│   │   ├── Images.xcassets
+│   │   ├── Info.plist
+│   │   ├── SaveUp-Bridging-Header.h
+│   │   ├── SaveUp.entitlements
+│   │   ├── SplashScreen.storyboard
+│   │   └── Supporting
+│   └── SaveUp.xcodeproj
+│       ├── project.pbxproj
+│       ├── project.xcworkspace
+│       └── xcshareddata
+├── package-lock.json
+├── package.json
+├── project_structure.txt
+├── public
+│   ├── icons
+│   │   ├── icon-192.png
+│   │   └── icon-512.png
+│   ├── manifest.json
+│   └── service-worker.js
+├── src
+│   ├── components
+│   │   ├── CategoryPieChart.tsx
+│   │   ├── Charts.tsx
+│   │   ├── DailySpendingChart.tsx
+│   │   └── WeeklyInsightsCard.tsx
+│   ├── config
+│   │   ├── firebase-config.js
+│   │   ├── firebase-config.js.backup
+│   │   └── firebase-config.ts
+│   ├── contexts
+│   │   ├── AuthContext.tsx
+│   │   ├── AuthContext.tsx.backup
+│   │   └── ThemeContext.tsx
+│   ├── hooks
+│   │   └── useRegisterServiceWorker.js
+│   ├── registerServiceWorker.js
+│   ├── screens
+│   │   └── InsightsHelper.ts
+│   ├── types
+│   │   └── firebase-react-native.d.ts
+│   └── utils
+│       └── insightsCalculator.ts
+├── tsconfig.json
+└── vercel.json
+
+29 directories, 67 files

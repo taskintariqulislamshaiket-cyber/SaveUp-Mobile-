@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,52 +17,103 @@ import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../src/config/firebase-config';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { calculateInsights, ExpenseItem } from '../../src/screens/InsightsHelper';
 
-const PERSONALITY_EMOJIS: Record<string, string> = {
-  guardian: '🛡️',
-  strategist: '🧠',
-  realist: '⚖️',
-  enjoyer: '🎉',
-  giver: '❤️',
-  planner: '📊',
-  improviser: '🎭',
+// ✅ Smart Insights imports
+import { calculateInsights } from '../../src/utils/insightsCalculator';
+import WeeklyInsightsCard from '../../src/components/WeeklyInsightsCard';
+import DailySpendingChart from '../../src/components/DailySpendingChart';
+import CategoryPieChart from '../../src/components/CategoryPieChart';
+
+const PERSONALITY_TYPES = {
+  starter: {
+    title: "The Starter",
+    emoji: "🌱",
+    description: "Every journey begins with a single step. Set up your income to unlock insights!",
+    tip: "Complete your profile to see your money personality!",
+    gradient: ['#10b981', '#34d399'],
+  },
+  saver: {
+    title: "The Saver",
+    emoji: "🐿️",
+    description: "You're amazing at keeping money aside. Your future self will thank you!",
+    tip: "You're a natural saver. Consider investing for even better returns!",
+    gradient: ['#6366f1', '#8b5cf6'],
+  },
+  strategist: {
+    title: "The Strategist",
+    emoji: "🦊",
+    description: "You're sharp. You know money is a tool, not just numbers.",
+    tip: "Research wisely, invest smartly. Your brain is your best asset!",
+    gradient: ['#f59e0b', '#f97316'],
+  },
+  balanced: {
+    title: "The Balanced",
+    emoji: "⚖️",
+    description: "Perfect balance between enjoying today and securing tomorrow.",
+    tip: "Balance is key. Keep up the great work!",
+    gradient: ['#06b6d4', '#0891b2'],
+  },
+  enjoyer: {
+    title: "The Enjoyer",
+    emoji: "🦄",
+    description: "Life is too short! Money means experiences, not just savings.",
+    tip: "Balance is key. Enjoy today, but plan for tomorrow too!",
+    gradient: ['#ec4899', '#f43f5e'],
+  },
+  riskTaker: {
+    title: "The Risk-Taker",
+    emoji: "🎲",
+    description: "You're living on the edge! Time to slow down a bit.",
+    tip: "Slow down! You've spent most of your budget this month.",
+    gradient: ['#ef4444', '#dc2626'],
+  },
 };
 
 export default function Dashboard() {
   const { user, userProfile } = useAuth();
   const router = useRouter();
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [insights, setInsights] = useState<any[]>([]);
+  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    loadData();
+    
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [user]);
 
   const loadData = async () => {
     if (!user) return;
 
     try {
-      // Load expenses
       const expensesQuery = query(
         collection(db, 'expenses'),
         where('userId', '==', user.uid),
         orderBy('date', 'desc')
       );
       const expensesSnapshot = await getDocs(expensesQuery);
-      const expensesData: ExpenseItem[] = expensesSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          amount: data.amount || 0,
-          category: data.category || 'Other',
-          description: data.description || '',
-          date: data.date?.toDate() || new Date(),
-          userId: data.userId || '',
-        };
-      });
+      const expensesData = expensesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data().date?.toDate() || new Date(),
+      }));
       setExpenses(expensesData);
 
-      // Load goals
       const goalsQuery = query(
         collection(db, 'goals'),
         where('userId', '==', user.uid)
@@ -70,40 +122,8 @@ export default function Dashboard() {
       const goalsData = goalsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        deadline: doc.data().deadline?.toDate(),
       }));
       setGoals(goalsData);
-
-      // Calculate insights
-      if (userProfile) {
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        const monthlyExpenses = expensesData.filter(exp => {
-          const expDate = exp.date;
-          return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
-        });
-
-        const totalSpent = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-        const salaryDay = userProfile.salaryDay || 1;
-        const today = new Date().getDate();
-        
-        let daysIntoMonth = today >= salaryDay ? today - salaryDay : today + (30 - salaryDay);
-        let daysUntilPayday = today < salaryDay ? salaryDay - today : 30 - (today - salaryDay);
-
-        const insightsData = {
-          totalSpent,
-          monthlyIncome: userProfile.monthlyIncome || 0,
-          remainingBalance: userProfile.remainingBalanceCurrentMonth || 0,
-          daysIntoMonth,
-          daysUntilPayday,
-          salaryDay,
-          expenses: monthlyExpenses,
-          personalityType: userProfile.personalityType || 'balanced',
-        };
-
-        const calculatedInsights = calculateInsights(insightsData);
-        setInsights(calculatedInsights);
-      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -111,10 +131,6 @@ export default function Dashboard() {
       setRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    loadData();
-  }, [user, userProfile]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -126,156 +142,196 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8b5cf6" />
-      </View>
+        <Text style={styles.loadingText}>Loading your financial universe...</Text>
+      </LinearGradient>
     );
   }
 
-  // Calculate stats
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const monthlyExpenses = expenses.filter(exp => {
-    const expDate = exp.date;
-    return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
-  });
-
-  const totalSpent = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const monthlyIncome = userProfile?.monthlyIncome || 0;
-  const remainingBalance = monthlyIncome - totalSpent;
-  const moneyHealth = monthlyIncome > 0 ? Math.max(0, ((monthlyIncome - totalSpent) / monthlyIncome) * 100) : 100;
+  const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long' });
+  
+  const thisMonthExpenses = expenses
+    .filter(exp => {
+      const expDate = new Date(exp.date);
+      const now = new Date();
+      return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
+    })
+    .reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
-  const getHealthColor = (health: number): [string, string] => {
-    if (health >= 70) return ['#10b981', '#059669'];
-    if (health >= 40) return ['#f59e0b', '#d97706'];
-    return ['#ef4444', '#dc2626'];
+  const moneyLeft = monthlyIncome - thisMonthExpenses;
+  const spentPercentage = monthlyIncome > 0 ? (thisMonthExpenses / monthlyIncome) * 100 : 0;
+  const moneyHealth = Math.max(0, Math.round((moneyLeft / monthlyIncome) * 100));
+
+  // ✅ Smart Insights data
+  const insights = calculateInsights(expenses);
+
+  const getDaysUntilSalary = () => {
+    const today = new Date();
+    const currentDay = today.getDate();
+    const salaryDay = userProfile?.salaryDay || 1;
+    
+    if (currentDay < salaryDay) {
+      return salaryDay - currentDay;
+    } else if (currentDay === salaryDay) {
+      return 0;
+    } else {
+      const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, salaryDay);
+      const diffTime = nextMonth.getTime() - today.getTime();
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
   };
 
-  const personalityEmoji = PERSONALITY_EMOJIS[userProfile?.personalityType || 'realist'] || '⚖️';
+  const daysUntilSalary = getDaysUntilSalary();
+
+  const getPersonality = () => {
+    if (monthlyIncome === 0) return PERSONALITY_TYPES.starter;
+    if (spentPercentage < 30) return PERSONALITY_TYPES.saver;
+    if (spentPercentage < 50) return PERSONALITY_TYPES.strategist;
+    if (spentPercentage < 70) return PERSONALITY_TYPES.balanced;
+    if (spentPercentage < 90) return PERSONALITY_TYPES.enjoyer;
+    return PERSONALITY_TYPES.riskTaker;
+  };
+
+  const personality = getPersonality();
+  const recentExpenses = expenses.slice(0, 5);
+  const topGoals = goals.slice(0, 3);
+
+  const totalWealth = (userProfile?.existingSavings || 0) + 
+                      (userProfile?.existingFDR || 0) + 
+                      (userProfile?.otherInvestments || 0);
 
   return (
-    <LinearGradient colors={['#0f172a' as any, '#1e293b' as any]} style={styles.container}>
+    <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
       <ScrollView
         style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.userName}>{userProfile?.displayName || user?.email?.split('@')[0] || 'User'}</Text>
+        {/* SaveUp Logo Header */}
+        <Animated.View style={[styles.logoHeader, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <View style={styles.logoContainer}>
+            <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.logoCircle}>
+              <Text style={styles.logoEmoji}>💰</Text>
+            </LinearGradient>
+            <View>
+              <Text style={styles.logoText}>SaveUp</Text>
+              <Text style={styles.logoSubtext}>Bangladesh's smartest money tracker</Text>
+            </View>
           </View>
-          <TouchableOpacity 
-            style={styles.personalityBadge}
-            onPress={() => router.push('/quiz')}
-          >
-            <Text style={styles.personalityEmoji}>{personalityEmoji}</Text>
-          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Personality Hero */}
+        <Animated.View style={[styles.personalityHero, { opacity: fadeAnim }]}>
+          <LinearGradient colors={personality.gradient} style={styles.personalityGradient}>
+            <Text style={styles.personalityEmoji}>{personality.emoji}</Text>
+            <Text style={styles.personalityTitle}>{personality.title}</Text>
+            <Text style={styles.personalityDesc}>{personality.description}</Text>
+            <View style={styles.personalityTip}>
+              <Ionicons name="bulb" size={20} color="#fff" />
+              <Text style={styles.personalityTipText}>{personality.tip}</Text>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+
+        {/* Tagline Banner */}
+        <View style={styles.taglineBanner}>
+          <Text style={styles.taglineMain}>Track automatically via SMS</Text>
+          <Text style={styles.taglineSub}>Get insights, save 10-30% more</Text>
+          <Text style={styles.taglineDetail}>Your finances. On autopilot • Money that actually makes sense</Text>
         </View>
 
-        {/* Smart Insights Section - Integrated */}
-        {insights.length > 0 && (
-          <View style={styles.insightsSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>💡 Smart Insights</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/insights')}>
-                <Text style={styles.seeAll}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Top 2 insights */}
-            {insights.slice(0, 2).map((insight, index) => (
-              <TouchableOpacity
-                key={insight.id}
-                activeOpacity={0.9}
-                onPress={() => router.push('/(tabs)/insights')}
-                style={styles.insightCard}
-              >
-                <LinearGradient
-                  colors={(
-                    insight.type === 'critical'
-                      ? ['#ef4444', '#dc2626']
-                      : insight.type === 'warning'
-                      ? ['#f59e0b', '#d97706']
-                      : ['#8b5cf6', '#7c3aed']
-                  ) as any}
-                  style={styles.insightGradient}
-                >
-                  <View style={styles.insightHeader}>
-                    <Text style={styles.insightEmoji}>{insight.emoji}</Text>
-                    <View style={styles.insightTextContainer}>
-                      <Text style={styles.insightTitle}>{insight.title}</Text>
-                      <Text style={styles.insightMessage} numberOfLines={2}>{insight.message}</Text>
-                    </View>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+        {/* Big Stats */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statRow}>
+            <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.statCard}>
+              <Text style={styles.statEmoji}>💰</Text>
+              <Text style={styles.statLabel}>{currentMonth.toUpperCase()}{'\n'}BUDGET</Text>
+              <Text style={styles.statValue}>৳{(monthlyIncome ?? 0).toLocaleString('en-BD')}</Text>
+              <Text style={styles.statHint}>Keep it rolling!</Text>
+            </LinearGradient>
 
-        {/* Stats Cards - 2x2 Grid */}
-        <View style={styles.statsSection}>
-          <View style={styles.statsRow}>
-            {/* Monthly Budget */}
-            <View style={styles.statCard}>
-              <LinearGradient colors={['#8b5cf6', '#7c3aed'] as any} style={styles.statGradient}>
-                <Ionicons name="cash-outline" size={28} color="#fff" />
-                <Text style={styles.statLabel}>Budget</Text>
-                <Text style={styles.statValue}>৳{monthlyIncome.toFixed(0)}</Text>
-                <Text style={styles.statHint}>This month</Text>
-              </LinearGradient>
-            </View>
-
-            {/* Spent So Far */}
-            <View style={styles.statCard}>
-              <LinearGradient colors={['#f59e0b', '#d97706'] as any} style={styles.statGradient}>
-                <Ionicons name="flame" size={28} color="#fff" />
-                <Text style={styles.statLabel}>Spent</Text>
-                <Text style={styles.statValue}>৳{totalSpent.toFixed(0)}</Text>
-                <Text style={styles.statHint}>{monthlyExpenses.length} transactions</Text>
-              </LinearGradient>
-            </View>
+            <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.statCard}>
+              <Text style={styles.statEmoji}>🔥</Text>
+              <Text style={styles.statLabel}>SPENT SO FAR</Text>
+              <Text style={styles.statValue}>৳{(thisMonthExpenses ?? 0).toLocaleString('en-BD')}</Text>
+              <Text style={styles.statHint}>
+                {spentPercentage < 50 ? "You're crushing it! 💪" : "Doing great!"}
+              </Text>
+            </LinearGradient>
           </View>
 
-          <View style={styles.statsRow}>
-            {/* Left to Spend */}
-            <View style={styles.statCard}>
-              <LinearGradient colors={['#10b981', '#059669'] as any} style={styles.statGradient}>
-                <Ionicons name="wallet-outline" size={28} color="#fff" />
-                <Text style={styles.statLabel}>Remaining</Text>
-                <Text style={styles.statValue}>৳{remainingBalance.toFixed(0)}</Text>
-                <Text style={styles.statHint}>Keep going!</Text>
-              </LinearGradient>
-            </View>
+          <View style={styles.statRow}>
+            <LinearGradient colors={['#10b981', '#059669']} style={styles.statCard}>
+              <Text style={styles.statEmoji}>😎</Text>
+              <Text style={styles.statLabel}>LEFT TO SPEND</Text>
+              <Text style={[styles.statValue, { color: moneyLeft < 0 ? '#fee2e2' : '#fff' }]}>
+                ৳{(moneyLeft ?? 0).toLocaleString('en-BD')}
+              </Text>
+              <Text style={styles.statHint}>
+                {moneyLeft < 0 ? "Overspent this month" : "Keep going!"}
+              </Text>
+            </LinearGradient>
 
-            {/* Money Health */}
-            <View style={styles.statCard}>
-              <LinearGradient colors={['#ec4899', '#db2777'] as any} style={styles.statGradient}>
-                <Ionicons name="heart" size={28} color="#fff" />
-                <Text style={styles.statLabel}>Health</Text>
-                <Text style={styles.statValue}>{moneyHealth.toFixed(0)}%</Text>
-                <Text style={styles.statHint}>
-                  {moneyHealth >= 70 ? 'Excellent!' : moneyHealth >= 40 ? 'Good' : 'Needs Work'}
-                </Text>
-              </LinearGradient>
+            <LinearGradient colors={['#ec4899', '#db2777']} style={styles.statCard}>
+              <Text style={styles.statEmoji}>✨</Text>
+              <Text style={styles.statLabel}>MONEY HEALTH</Text>
+              <Text style={styles.statValue}>{(moneyHealth ?? 0)}%</Text>
+              <Text style={styles.statHint}>
+                {moneyHealth >= 70 ? "You're a pro!" : "Keep it up!"}
+              </Text>
+            </LinearGradient>
+          </View>
+        </View>
+
+        {/* Payday Banner */}
+        <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.paydayBanner}>
+          <Text style={styles.paydayTitle}>
+            {daysUntilSalary === 0 ? '🎉 Salary Day!' : `${daysUntilSalary} days until payday`}
+          </Text>
+          <Text style={styles.paydaySubtitle}>Save smart, live fully ✨</Text>
+        </LinearGradient>
+
+        {/* 🔥 Smart Insights Section */}
+        <WeeklyInsightsCard insights={insights} />
+        <DailySpendingChart data={insights.dailyData} />
+        <CategoryPieChart data={insights.byCategory} />
+
+        {/* Safety Net */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🛡️ Your Safety Net</Text>
+          <View style={styles.safetyGrid}>
+            <View style={styles.safetyCard}>
+              <Text style={styles.safetyLabel}>Cash Ready</Text>
+              <Text style={styles.safetyValue}>৳{(userProfile?.existingSavings ?? 0).toLocaleString('en-BD')}</Text>
+              <Text style={styles.safetyDesc}>bKash, bank, pocket</Text>
+            </View>
+            <View style={styles.safetyCard}>
+              <Text style={styles.safetyLabel}>Locked (FDR)</Text>
+              <Text style={styles.safetyValue}>৳{(userProfile?.existingFDR ?? 0).toLocaleString('en-BD')}</Text>
+              <Text style={styles.safetyDesc}>Growing with interest</Text>
             </View>
           </View>
+          <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.totalWealthCard}>
+            <Text style={styles.totalWealthLabel}>Total Wealth</Text>
+            <Text style={styles.totalWealthValue}>৳{(totalWealth ?? 0).toLocaleString('en-BD')}</Text>
+            <Text style={styles.totalWealthDesc}>Building your future! 🚀</Text>
+          </LinearGradient>
         </View>
 
         {/* Goals Preview */}
-        {goals.length > 0 && (
+        {topGoals.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>🎯 Your Goals</Text>
+              <Text style={styles.sectionTitle}>🎯 Your Dreams</Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/goals')}>
-                <Text style={styles.seeAll}>See All</Text>
+                <Text style={styles.seeAll}>See All →</Text>
               </TouchableOpacity>
             </View>
-
-            {goals.slice(0, 3).map((goal) => {
+            {topGoals.map(goal => {
               const progress = (goal.saved / goal.targetAmount) * 100;
               return (
                 <View key={goal.id} style={styles.goalCard}>
@@ -283,14 +339,16 @@ export default function Dashboard() {
                     <Text style={styles.goalName}>{goal.name}</Text>
                     <Text style={styles.goalProgress}>{Math.round(progress)}%</Text>
                   </View>
-                  <View style={styles.progressBar}>
-                    <View 
-                      style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
+                  <View style={styles.goalProgressBar}>
+                    <LinearGradient
+                      colors={['#8b5cf6', '#ec4899']}
+                      style={[styles.goalProgressFill, { width: `${Math.min(progress, 100)}%` }]}
                     />
                   </View>
-                  <Text style={styles.goalAmount}>
-                    ৳{goal.saved.toLocaleString('en-BD')} / ৳{goal.targetAmount.toLocaleString('en-BD')}
-                  </Text>
+                  <View style={styles.goalFooter}>
+                    <Text style={styles.goalAmount}>৳{(goal.saved ?? 0).toLocaleString('en-BD')}</Text>
+                    <Text style={styles.goalTarget}>of ৳{(goal.targetAmount ?? 0).toLocaleString('en-BD')}</Text>
+                  </View>
                 </View>
               );
             })}
@@ -300,42 +358,37 @@ export default function Dashboard() {
         {/* Recent Expenses */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>💸 Recent Expenses</Text>
+            <Text style={styles.sectionTitle}>💸 Where'd Your Money Go?</Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/expenses')}>
-              <Text style={styles.seeAll}>See All</Text>
+              <Text style={styles.seeAll}>See All →</Text>
             </TouchableOpacity>
           </View>
 
-          {monthlyExpenses.slice(0, 5).map((expense) => (
-            <View key={expense.id} style={styles.expenseItem}>
-              <View style={styles.expenseIcon}>
-                <Ionicons
-                  name={expense.category === 'Food' ? 'fast-food' : 'cart'}
-                  size={20}
-                  color="#8b5cf6"
-                />
-              </View>
-              <View style={styles.expenseDetails}>
-                <Text style={styles.expenseName}>{expense.description}</Text>
-                <Text style={styles.expenseCategory}>{expense.category}</Text>
-              </View>
-              <Text style={styles.expenseAmount}>-৳{expense.amount.toFixed(0)}</Text>
-            </View>
-          ))}
-
-          {monthlyExpenses.length === 0 && (
+          {recentExpenses.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="receipt-outline" size={48} color="#64748b" />
-              <Text style={styles.emptyText}>No expenses yet this month</Text>
-              <TouchableOpacity 
-                onPress={() => router.push('/(tabs)/expenses')}
-                style={styles.addExpenseButton}
-              >
-                <Text style={styles.addExpenseText}>Add Your First Expense</Text>
-              </TouchableOpacity>
+              <Text style={styles.emptyEmoji}>🤷</Text>
+              <Text style={styles.emptyText}>No expenses yet!</Text>
+              <Text style={styles.emptyHint}>Start tracking to see your spending patterns</Text>
             </View>
+          ) : (
+            recentExpenses.map(expense => (
+              <View key={expense.id} style={styles.expenseItem}>
+                <View style={styles.expenseLeft}>
+                  <Text style={styles.expenseCategory}>{expense.category}</Text>
+                  <Text style={styles.expenseDate}>
+                    {new Date(expense.date).toLocaleDateString('en-GB', { 
+                      day: 'numeric', 
+                      month: 'short' 
+                    })}
+                  </Text>
+                </View>
+                <Text style={styles.expenseAmount}>-৳{(expense.amount ?? 0).toLocaleString('en-BD')}</Text>
+              </View>
+            ))
           )}
         </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </LinearGradient>
   );
@@ -343,197 +396,65 @@ export default function Dashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0f172a',
-  },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { color: '#94a3b8', marginTop: 16, fontSize: 14 },
   scrollView: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 60,
-  },
-  greeting: { fontSize: 16, color: '#94a3b8' },
-  userName: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
-  personalityBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#1e293b',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#334155',
-  },
-  personalityEmoji: { fontSize: 28 },
-  insightsSection: { paddingHorizontal: 20, marginBottom: 24 },
-  insightCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  insightGradient: { padding: 20 },
-  insightHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  insightEmoji: { fontSize: 32, marginRight: 12 },
-  insightTextContainer: { flex: 1 },
-  insightTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  insightMessage: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.9,
-    lineHeight: 20,
-  },
-  statsSection: { paddingHorizontal: 20, marginBottom: 24 },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  statGradient: {
-    padding: 20,
-    minHeight: 140,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.9,
-    marginTop: 8,
-    marginBottom: 4,
-    fontWeight: '600',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  statHint: {
-    fontSize: 12,
-    color: '#fff',
-    opacity: 0.8,
-  },
-  section: { padding: 20 },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  seeAll: {
-    fontSize: 14,
-    color: '#8b5cf6',
-    fontWeight: '600',
-  },
-  goalCard: {
-    backgroundColor: '#1e293b',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-  goalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  goalName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    flex: 1,
-  },
-  goalProgress: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#8b5cf6',
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#334155',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#8b5cf6',
-    borderRadius: 4,
-  },
-  goalAmount: {
-    fontSize: 12,
-    color: '#94a3b8',
-  },
-  expenseItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1e293b',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  expenseIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#334155',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  expenseDetails: { flex: 1 },
-  expenseName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 2,
-  },
-  expenseCategory: { fontSize: 12, color: '#94a3b8' },
-  expenseAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ef4444',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  addExpenseButton: {
-    backgroundColor: '#8b5cf6',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  addExpenseText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
+  logoHeader: { padding: 20, paddingTop: 60 },
+  logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  logoCircle: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  logoEmoji: { fontSize: 28 },
+  logoText: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+  logoSubtext: { fontSize: 11, color: '#94a3b8' },
+  personalityHero: { marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden' },
+  personalityGradient: { padding: 32, alignItems: 'center' },
+  personalityEmoji: { fontSize: 64, marginBottom: 12 },
+  personalityTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
+  personalityDesc: { fontSize: 14, color: '#fff', textAlign: 'center', marginBottom: 16, opacity: 0.95 },
+  personalityTip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', padding: 12, borderRadius: 12, gap: 8 },
+  personalityTipText: { fontSize: 13, color: '#fff', fontWeight: '600' },
+  taglineBanner: { backgroundColor: '#f59e0b', marginHorizontal: 20, marginBottom: 20, padding: 20, borderRadius: 16, alignItems: 'center' },
+  taglineMain: { fontSize: 18, fontWeight: 'bold', color: '#78350f', marginBottom: 4 },
+  taglineSub: { fontSize: 14, color: '#78350f', marginBottom: 8 },
+  taglineDetail: { fontSize: 11, color: '#78350f', textAlign: 'center', opacity: 0.8 },
+  statsGrid: { paddingHorizontal: 20, marginBottom: 20 },
+  statRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  statCard: { flex: 1, padding: 20, borderRadius: 20, minHeight: 140 },
+  statEmoji: { fontSize: 32, marginBottom: 8 },
+  statLabel: { fontSize: 11, color: '#fff', fontWeight: '700', marginBottom: 8, opacity: 0.9 },
+  statValue: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
+  statHint: { fontSize: 11, color: '#fff', opacity: 0.85 },
+  paydayBanner: { marginHorizontal: 20, marginBottom: 20, padding: 24, borderRadius: 20, alignItems: 'center' },
+  paydayTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
+  paydaySubtitle: { fontSize: 14, color: '#fff', opacity: 0.9 },
+  section: { paddingHorizontal: 20, marginBottom: 24 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  seeAll: { fontSize: 14, color: '#8b5cf6', fontWeight: '600' },
+  safetyGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  safetyCard: { flex: 1, backgroundColor: '#1e293b', padding: 16, borderRadius: 16 },
+  safetyLabel: { fontSize: 12, color: '#94a3b8', marginBottom: 8 },
+  safetyValue: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
+  safetyDesc: { fontSize: 11, color: '#64748b' },
+  totalWealthCard: { padding: 20, borderRadius: 16, alignItems: 'center' },
+  totalWealthLabel: { fontSize: 13, color: '#fff', fontWeight: '600', marginBottom: 8, opacity: 0.9 },
+  totalWealthValue: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
+  totalWealthDesc: { fontSize: 12, color: '#fff', opacity: 0.85 },
+  goalCard: { backgroundColor: '#1e293b', padding: 16, borderRadius: 16, marginBottom: 12 },
+  goalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  goalName: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  goalProgress: { fontSize: 16, fontWeight: 'bold', color: '#8b5cf6' },
+  goalProgressBar: { height: 8, backgroundColor: '#334155', borderRadius: 4, overflow: 'hidden', marginBottom: 12 },
+  goalProgressFill: { height: '100%', borderRadius: 4 },
+  goalFooter: { flexDirection: 'row', justifyContent: 'space-between' },
+  goalAmount: { fontSize: 13, color: '#94a3b8', fontWeight: '600' },
+  goalTarget: { fontSize: 13, color: '#64748b' },
+  expenseItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1e293b', padding: 16, borderRadius: 12, marginBottom: 8 },
+  expenseLeft: { flex: 1 },
+  expenseCategory: { fontSize: 15, fontWeight: '600', color: '#fff', marginBottom: 4 },
+  expenseDate: { fontSize: 12, color: '#94a3b8' },
+  expenseAmount: { fontSize: 16, fontWeight: 'bold', color: '#ef4444' },
+  emptyState: { alignItems: 'center', paddingVertical: 40 },
+  emptyEmoji: { fontSize: 64, marginBottom: 12 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: '#94a3b8', marginBottom: 8 },
+  emptyHint: { fontSize: 13, color: '#64748b', textAlign: 'center' },
 });
