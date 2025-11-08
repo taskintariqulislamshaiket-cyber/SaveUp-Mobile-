@@ -193,8 +193,9 @@ export default function LoginPage() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* ✅ DARKER GRADIENT - Almost black with dark teal */}
         <LinearGradient
-          colors={['#004D00', '#005864', '#17BEBB']}
+          colors={['#001a00', '#002830', '#003d3d']}
           style={StyleSheet.absoluteFillObject}
         />
 
@@ -275,7 +276,7 @@ export default function LoginPage() {
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -290,7 +291,7 @@ export default function LoginPage() {
             <TextInput
               style={styles.input}
               placeholder="Password"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -308,7 +309,7 @@ export default function LoginPage() {
               <TextInput
                 style={styles.input}
                 placeholder="Confirm Password"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor="#64748b"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showPassword}
@@ -361,7 +362,7 @@ export default function LoginPage() {
         </Animated.View>
 
         <Text style={styles.footer}>
-          �� Bank-level security • Your data stays private
+          🔒 Bank-level security • Your data stays private
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -369,10 +370,10 @@ export default function LoginPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#004D00' },
+  container: { flex: 1, backgroundColor: '#001a00' },
   scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20, minHeight: height },
   backgroundCircles: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
-  circle: { position: 'absolute', borderRadius: 999, opacity: 0.1 },
+  circle: { position: 'absolute', borderRadius: 999, opacity: 0.08 },
   circle1: { width: 300, height: 300, backgroundColor: '#00D4A1', top: -100, right: -100 },
   circle2: { width: 200, height: 200, backgroundColor: '#4CAF50', bottom: -50, left: -50 },
   headerContainer: { alignItems: 'center', marginBottom: 40 },
@@ -384,8 +385,8 @@ const styles = StyleSheet.create({
   },
   walletEmoji: { fontSize: 50 },
   title: { fontSize: 48, fontWeight: 'bold', color: '#fff', marginBottom: 8, letterSpacing: 1 },
-  tagline: { fontSize: 16, color: '#E0F7F1', textAlign: 'center', marginBottom: 4, fontStyle: 'italic' },
-  subtitle: { fontSize: 18, color: '#E0F7F1', textAlign: 'center' },
+  tagline: { fontSize: 16, color: '#94a3b8', textAlign: 'center', marginBottom: 4, fontStyle: 'italic' },
+  subtitle: { fontSize: 18, color: '#94a3b8', textAlign: 'center' },
   formContainer: { width: '100%', maxWidth: 400, alignSelf: 'center' },
   googleButton: { marginBottom: 20 },
   googleGradient: {
@@ -394,11 +395,11 @@ const styles = StyleSheet.create({
   },
   googleText: { color: '#1f2937', fontSize: 16, fontWeight: '600' },
   dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
-  divider: { flex: 1, height: 1, backgroundColor: '#17BEBB' },
-  dividerText: { color: '#94a3b8', marginHorizontal: 16, fontSize: 14 },
+  divider: { flex: 1, height: 1, backgroundColor: '#334155' },
+  dividerText: { color: '#64748b', marginHorizontal: 16, fontSize: 14 },
   inputContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#005864', borderRadius: 16,
-    marginBottom: 16, paddingHorizontal: 16, height: 56, borderWidth: 1, borderColor: '#17BEBB',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f172a', borderRadius: 16,
+    marginBottom: 16, paddingHorizontal: 16, height: 56, borderWidth: 2, borderColor: '#1e293b',
   },
   inputIcon: { marginRight: 12 },
   input: { flex: 1, color: '#fff', fontSize: 16 },
@@ -415,7 +416,7 @@ const styles = StyleSheet.create({
   },
   submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   toggleContainer: { alignItems: 'center', paddingVertical: 16 },
-  toggleText: { color: '#E0F7F1', fontSize: 14 },
+  toggleText: { color: '#94a3b8', fontSize: 14 },
   toggleLink: { color: '#00D4A1', fontWeight: 'bold' },
-  footer: { textAlign: 'center', color: '#94a3b8', fontSize: 12, marginTop: 32 },
+  footer: { textAlign: 'center', color: '#64748b', fontSize: 12, marginTop: 32 },
 });
