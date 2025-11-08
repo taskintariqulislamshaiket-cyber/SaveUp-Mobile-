@@ -9,17 +9,20 @@ import {
   Alert,
   Platform,
   Animated,
+  Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../src/config/firebase-config';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import Icon from '../../src/components/Icon';
 
 export default function ProfileScreen() {
   const { user, userProfile, signOut } = useAuth();
+  const { theme, toggleTheme, colors } = useTheme();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -144,16 +147,29 @@ export default function ProfileScreen() {
   const daysUntilSalary = getDaysUntilSalary();
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-        <Text style={styles.title}>Profile</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
+        
+        {/* Theme Toggle */}
+        <View style={styles.themeToggle}>
+          <Text style={[styles.themeLabel, { color: colors.textSecondary }]}>
+            {theme === 'dark' ? '🌙' : '☀️'} {theme === 'dark' ? 'Dark' : 'Light'}
+          </Text>
+          <Switch
+            value={theme === 'light'}
+            onValueChange={toggleTheme}
+            trackColor={{ false: '#334155', true: '#00D4A1' }}
+            thumbColor={theme === 'light' ? '#4CAF50' : '#f4f3f4'}
+          />
+        </View>
       </Animated.View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* User Card */}
         <Animated.View style={[styles.userCard, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-          <LinearGradient colors={['#6366f1', '#06b6d4']} style={styles.userGradient}>
+          <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.userGradient}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
                 {(user?.email || 'U')[0].toUpperCase()}
@@ -166,150 +182,150 @@ export default function ProfileScreen() {
 
         {/* Financial Snapshot */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📊 Your Financial Snapshot</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>📊 Your Financial Snapshot</Text>
           <View style={styles.snapshotGrid}>
-            <LinearGradient colors={['#6366f1', '#06b6d4']} style={styles.snapshotCard}>
+            <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.snapshotCard}>
               <Text style={styles.snapshotEmoji}>💎</Text>
               <Text style={styles.snapshotLabel}>Total Wealth</Text>
               <Text style={styles.snapshotValue}>৳{totalWealth.toLocaleString('en-BD')}</Text>
               <Text style={styles.snapshotDesc}>Savings + FDR + Investments</Text>
             </LinearGradient>
 
-            <View style={styles.snapshotCard}>
+            <View style={[styles.snapshotCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={styles.snapshotEmoji}>{daysUntilSalary === 0 ? '🎉' : '⏰'}</Text>
-              <Text style={styles.snapshotLabel}>
+              <Text style={[styles.snapshotLabel, { color: colors.textSecondary }]}>
                 {daysUntilSalary === 0 ? 'Salary Day!' : `${daysUntilSalary} days to payday`}
               </Text>
-              <Text style={styles.snapshotValue}>৳{netMonthlyIncome.toLocaleString('en-BD')}</Text>
-              <Text style={styles.snapshotDesc}>Net monthly income</Text>
+              <Text style={[styles.snapshotValue, { color: colors.text }]}>৳{netMonthlyIncome.toLocaleString('en-BD')}</Text>
+              <Text style={[styles.snapshotDesc, { color: colors.textSecondary }]}>Net monthly income</Text>
             </View>
           </View>
         </View>
 
         {/* Money Coming In */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💵 Money Coming In</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>💵 Money Coming In</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Monthly Income / Salary (৳)</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="cash" size={20} color="#6366f1" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Monthly Income / Salary (৳)</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Icon name="cash" size={20} color="#00D4A1" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="e.g., 50000"
-                placeholderTextColor="#64748b"
+                placeholderTextColor={colors.textSecondary}
                 value={formData.monthlyIncome}
                 onChangeText={(text) => setFormData({ ...formData, monthlyIncome: text })}
                 keyboardType="numeric"
               />
             </View>
-            <Text style={styles.inputHint}>Your take-home pay after taxes</Text>
+            <Text style={[styles.inputHint, { color: colors.textSecondary }]}>Your take-home pay after taxes</Text>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>When do you get paid?</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="calendar" size={20} color="#6366f1" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>When do you get paid?</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Icon name="calendar" size={20} color="#00D4A1" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="1-31"
-                placeholderTextColor="#64748b"
+                placeholderTextColor={colors.textSecondary}
                 value={formData.salaryDay}
                 onChangeText={(text) => setFormData({ ...formData, salaryDay: text })}
                 keyboardType="numeric"
               />
             </View>
-            <Text style={styles.inputHint}>Day of the month (Helps track spending cycles)</Text>
+            <Text style={[styles.inputHint, { color: colors.textSecondary }]}>Day of the month (Helps track spending cycles)</Text>
           </View>
         </View>
 
         {/* What You've Got */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💎 What You've Got</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>💎 What You've Got</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Cash in Bank (৳)</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="wallet" size={20} color="#6366f1" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Cash in Bank (৳)</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Icon name="wallet" size={20} color="#00D4A1" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="e.g., 100000"
-                placeholderTextColor="#64748b"
+                placeholderTextColor={colors.textSecondary}
                 value={formData.existingSavings}
                 onChangeText={(text) => setFormData({ ...formData, existingSavings: text })}
                 keyboardType="numeric"
               />
             </View>
-            <Text style={styles.inputHint}>Money you can use anytime (savings, bKash, etc.)</Text>
+            <Text style={[styles.inputHint, { color: colors.textSecondary }]}>Money you can use anytime (savings, bKash, etc.)</Text>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Fixed Deposits / FDR (৳)</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed" size={20} color="#6366f1" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Fixed Deposits / FDR (৳)</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Icon name="lock-closed" size={20} color="#00D4A1" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="e.g., 50000"
-                placeholderTextColor="#64748b"
+                placeholderTextColor={colors.textSecondary}
                 value={formData.existingFDR}
                 onChangeText={(text) => setFormData({ ...formData, existingFDR: text })}
                 keyboardType="numeric"
               />
             </View>
-            <Text style={styles.inputHint}>Money locked in banks earning interest</Text>
+            <Text style={[styles.inputHint, { color: colors.textSecondary }]}>Money locked in banks earning interest</Text>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Other Investments (৳)</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="trending-up" size={20} color="#6366f1" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Other Investments (৳)</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Icon name="trending-up" size={20} color="#00D4A1" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="e.g., 30000"
-                placeholderTextColor="#64748b"
+                placeholderTextColor={colors.textSecondary}
                 value={formData.otherInvestments}
                 onChangeText={(text) => setFormData({ ...formData, otherInvestments: text })}
                 keyboardType="numeric"
               />
             </View>
-            <Text style={styles.inputHint}>Stocks, mutual funds, DPS, bonds, crypto, etc.</Text>
+            <Text style={[styles.inputHint, { color: colors.textSecondary }]}>Stocks, mutual funds, DPS, bonds, crypto, etc.</Text>
           </View>
         </View>
 
         {/* Monthly Must-Pays */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💳 Monthly Must-Pays</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>💳 Monthly Must-Pays</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Total EMI / Loan Payments (৳)</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="card" size={20} color="#6366f1" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Total EMI / Loan Payments (৳)</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Icon name="card" size={20} color="#00D4A1" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="e.g., 15000"
-                placeholderTextColor="#64748b"
+                placeholderTextColor={colors.textSecondary}
                 value={formData.monthlyEMI}
                 onChangeText={(text) => setFormData({ ...formData, monthlyEMI: text })}
                 keyboardType="numeric"
               />
             </View>
-            <Text style={styles.inputHint}>Home loan, car EMI, personal loan, credit cards—add them all</Text>
+            <Text style={[styles.inputHint, { color: colors.textSecondary }]}>Home loan, car EMI, personal loan, credit cards—add them all</Text>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Emergency Fund Goal (৳)</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="shield-checkmark" size={20} color="#6366f1" style={styles.inputIcon} />
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Emergency Fund Goal (৳)</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Icon name="shield-checkmark" size={20} color="#00D4A1" style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="e.g., 300000"
-                placeholderTextColor="#64748b"
+                placeholderTextColor={colors.textSecondary}
                 value={formData.emergencyFundTarget}
                 onChangeText={(text) => setFormData({ ...formData, emergencyFundTarget: text })}
                 keyboardType="numeric"
               />
             </View>
-            <Text style={styles.inputHint}>
+            <Text style={[styles.inputHint, { color: colors.textSecondary }]}>
               💡 Pro tip: Save 6 months of expenses = ৳{((parseFloat(formData.monthlyIncome) || 0) * 6).toLocaleString('en-BD')}
             </Text>
           </View>
@@ -317,7 +333,7 @@ export default function ProfileScreen() {
 
         {/* Save Button */}
         <TouchableOpacity onPress={handleSave} disabled={loading} activeOpacity={0.8}>
-          <LinearGradient colors={['#6366f1', '#06b6d4']} style={styles.saveButton}>
+          <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.saveButton}>
             <Text style={styles.saveButtonText}>
               {loading ? 'Saving...' : '✅ Save & Update'}
             </Text>
@@ -325,22 +341,24 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* Sign Out */}
-        <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
-          <Ionicons name="log-out" size={24} color="#ef4444" />
+        <TouchableOpacity onPress={handleSignOut} style={[styles.signOutButton, { backgroundColor: colors.surface, borderColor: '#ef4444' }]}>
+          <Icon name="log-out" size={24} color="#ef4444" />
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
-  header: { padding: 20, paddingTop: 60 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
+  header: { padding: 20, paddingTop: 60, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  title: { fontSize: 32, fontWeight: 'bold' },
+  themeToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  themeLabel: { fontSize: 14, fontWeight: '600' },
   userCard: { marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden' },
   userGradient: { padding: 32, alignItems: 'center' },
   avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 4, borderColor: 'rgba(255,255,255,0.3)' },
@@ -348,21 +366,21 @@ const styles = StyleSheet.create({
   userName: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
   userEmail: { fontSize: 14, color: '#fff', opacity: 0.9 },
   section: { padding: 20 },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 16 },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
   snapshotGrid: { flexDirection: 'row', gap: 12 },
-  snapshotCard: { flex: 1, backgroundColor: '#1e293b', padding: 20, borderRadius: 20, alignItems: 'center', borderWidth: 2, borderColor: '#334155' },
+  snapshotCard: { flex: 1, padding: 20, borderRadius: 20, alignItems: 'center', borderWidth: 2 },
   snapshotEmoji: { fontSize: 36, marginBottom: 8 },
-  snapshotLabel: { fontSize: 11, color: '#94a3b8', marginBottom: 8, fontWeight: '600', textAlign: 'center' },
+  snapshotLabel: { fontSize: 11, color: '#fff', marginBottom: 8, fontWeight: '600', textAlign: 'center' },
   snapshotValue: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
-  snapshotDesc: { fontSize: 10, color: '#64748b', textAlign: 'center' },
+  snapshotDesc: { fontSize: 10, color: '#fff', opacity: 0.8, textAlign: 'center' },
   inputGroup: { marginBottom: 20 },
-  inputLabel: { fontSize: 13, fontWeight: '700', color: '#94a3b8', marginBottom: 8, textTransform: 'uppercase' },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 14, paddingHorizontal: 16, height: 56, borderWidth: 2, borderColor: '#334155' },
+  inputLabel: { fontSize: 13, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 16, height: 56, borderWidth: 2 },
   inputIcon: { marginRight: 12 },
-  input: { flex: 1, color: '#fff', fontSize: 16 },
-  inputHint: { fontSize: 12, color: '#64748b', marginTop: 6, lineHeight: 16 },
+  input: { flex: 1, fontSize: 16 },
+  inputHint: { fontSize: 12, marginTop: 6, lineHeight: 16 },
   saveButton: { marginHorizontal: 20, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   saveButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  signOutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1e293b', marginHorizontal: 20, height: 56, borderRadius: 16, gap: 12, borderWidth: 2, borderColor: '#ef4444' },
+  signOutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginHorizontal: 20, height: 56, borderRadius: 16, gap: 12, borderWidth: 2 },
   signOutText: { fontSize: 16, fontWeight: '600', color: '#ef4444' },
 });
