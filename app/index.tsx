@@ -1,87 +1,49 @@
 import { useEffect, useState } from 'react';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const ONBOARDING_COMPLETED_KEY = '@saveup_onboarding_completed';
 
 export default function Index() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
-  // Wait for router to mount
+  // Wait for mount
   useEffect(() => {
-    const timer = setTimeout(() => setIsMounted(true), 100);
+    const timer = setTimeout(() => setIsReady(true), 500);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (!isMounted) return;
-    checkOnboardingStatus();
-  }, [isMounted]);
+    if (!isReady || loading) return;
 
-  const checkOnboardingStatus = async () => {
-    try {
-      // Check URL parameter for force-onboarding (works in incognito)
-      if (params.onboarding === 'true') {
-        console.log('→ Force showing onboarding via URL parameter');
-        await new Promise(resolve => setTimeout(resolve, 200));
-        router.replace('/onboarding');
-        return;
-      }
-
-      const hasCompletedOnboarding = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
-      
-      if (!hasCompletedOnboarding) {
-        console.log('→ First time user, showing onboarding');
-        await new Promise(resolve => setTimeout(resolve, 200));
-        router.replace('/onboarding');
-        return;
-      }
-      
-      console.log('→ Onboarding already completed, proceeding to auth check');
-      setOnboardingComplete(true);
-      setCheckingOnboarding(false);
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
-      setOnboardingComplete(true);
-      setCheckingOnboarding(false);
-    }
-  };
-
-  useEffect(() => {
-    if (loading || checkingOnboarding || !onboardingComplete || !isMounted) return;
-
-    console.log('Index navigation check:', { 
+    console.log('🔍 Navigation check:', { 
       user: !!user, 
       hasPersonality: !!userProfile?.personalityType,
       isComplete: userProfile?.profileComplete 
     });
 
-    const timer = setTimeout(() => {
+    const navigate = () => {
+      // ALWAYS show onboarding for new/incognito users (no storage check)
       if (!user) {
-        console.log('→ Redirecting to login');
-        router.replace('/login');
+        console.log('✅ No user → Showing onboarding');
+        router.replace('/onboarding');
       } else if (!userProfile?.personalityType) {
-        console.log('→ Redirecting to quiz');
+        console.log('✅ No personality → Showing quiz');
         router.replace('/quiz');
       } else if (!userProfile?.profileComplete) {
-        console.log('→ Redirecting to profile-setup');
+        console.log('✅ Incomplete profile → Showing profile-setup');
         router.replace('/profile-setup');
       } else {
-        console.log('→ Redirecting to dashboard');
+        console.log('✅ Complete → Showing dashboard');
         router.replace('/(tabs)');
       }
-    }, 100);
+    };
 
+    const timer = setTimeout(navigate, 200);
     return () => clearTimeout(timer);
-  }, [user, userProfile, loading, checkingOnboarding, onboardingComplete, isMounted, router]);
+  }, [user, userProfile, loading, isReady, router]);
 
   return (
     <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
