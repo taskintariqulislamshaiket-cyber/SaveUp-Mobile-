@@ -193,9 +193,9 @@ export default function LoginPage() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ✅ DARKER GRADIENT - Almost black with dark teal */}
+        {/* ✅ EXACT MATCH - Dark navy like your mobile (Image 2) */}
         <LinearGradient
-          colors={['#001a00', '#002830', '#003d3d']}
+          colors={['#0f172a', '#1e1b4b', '#1e293b']}
           style={StyleSheet.absoluteFillObject}
         />
 
@@ -309,7 +309,7 @@ export default function LoginPage() {
               <TextInput
                 style={styles.input}
                 placeholder="Confirm Password"
-                placeholderTextColor="#64748b"
+                placeholderTextColor="#64748b"}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showPassword}
@@ -370,10 +370,10 @@ export default function LoginPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#001a00' },
+  container: { flex: 1, backgroundColor: '#0f172a' },
   scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20, minHeight: height },
   backgroundCircles: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
-  circle: { position: 'absolute', borderRadius: 999, opacity: 0.08 },
+  circle: { position: 'absolute', borderRadius: 999, opacity: 0.05 },
   circle1: { width: 300, height: 300, backgroundColor: '#00D4A1', top: -100, right: -100 },
   circle2: { width: 200, height: 200, backgroundColor: '#4CAF50', bottom: -50, left: -50 },
   headerContainer: { alignItems: 'center', marginBottom: 40 },
@@ -398,8 +398,8 @@ const styles = StyleSheet.create({
   divider: { flex: 1, height: 1, backgroundColor: '#334155' },
   dividerText: { color: '#64748b', marginHorizontal: 16, fontSize: 14 },
   inputContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f172a', borderRadius: 16,
-    marginBottom: 16, paddingHorizontal: 16, height: 56, borderWidth: 2, borderColor: '#1e293b',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 16,
+    marginBottom: 16, paddingHorizontal: 16, height: 56, borderWidth: 2, borderColor: '#334155',
   },
   inputIcon: { marginRight: 12 },
   input: { flex: 1, color: '#fff', fontSize: 16 },
