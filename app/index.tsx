@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,7 +10,7 @@ const ONBOARDING_COMPLETED_KEY = '@saveup_onboarding_completed';
 export default function Index() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useLocalSearchParams();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
 
@@ -21,9 +21,7 @@ export default function Index() {
   const checkOnboardingStatus = async () => {
     try {
       // Check URL parameter for force-onboarding (works in incognito)
-      const forceOnboarding = searchParams.get('onboarding');
-      
-      if (forceOnboarding === 'true') {
+      if (params.onboarding === 'true') {
         console.log('→ Force showing onboarding via URL parameter');
         router.replace('/onboarding');
         return;
