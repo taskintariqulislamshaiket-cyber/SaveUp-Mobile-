@@ -11,14 +11,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '../src/components/Icon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
 const ONBOARDING_COMPLETED_KEY = '@saveup_onboarding_completed';
-
-// Web-compatible: use native driver only on mobile
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 interface Slide {
@@ -26,9 +24,8 @@ interface Slide {
   title: string;
   subtitle: string;
   description: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: string;
   gradient: string[];
-  illustration: 'problem' | 'whatsapp' | 'sms' | 'warning' | 'goals' | 'cta';
 }
 
 const slides: Slide[] = [
@@ -39,7 +36,6 @@ const slides: Slide[] = [
     description: 'Track every taka without the hassle.',
     icon: 'sad-outline',
     gradient: ['#ef4444', '#dc2626'],
-    illustration: 'problem',
   },
   {
     id: 2,
@@ -48,7 +44,6 @@ const slides: Slide[] = [
     description: '"lunch 500" → Done ✅\nNo forms. No clicking. Just chat.',
     icon: 'chatbubbles',
     gradient: ['#8b5cf6', '#7c3aed'],
-    illustration: 'whatsapp',
   },
   {
     id: 3,
@@ -57,16 +52,14 @@ const slides: Slide[] = [
     description: 'Zero manual entry. Magic happens in the background.',
     icon: 'flash',
     gradient: ['#f59e0b', '#d97706'],
-    illustration: 'sms',
   },
   {
     id: 4,
     title: 'We Warn You Before It\'s Too Late ⚠️',
-    subtitle: '🚨 "Your budget runs out in 8 days...',
+    subtitle: '�� "Your budget runs out in 8 days...',
     description: 'but salary is 13 days away!"\n\nSmart alerts. Real savings.',
     icon: 'warning',
     gradient: ['#ec4899', '#db2777'],
-    illustration: 'warning',
   },
   {
     id: 5,
@@ -75,16 +68,14 @@ const slides: Slide[] = [
     description: 'Set goals and track progress.\nEvery taka brings you closer.',
     icon: 'trophy',
     gradient: ['#10b981', '#059669'],
-    illustration: 'goals',
   },
   {
     id: 6,
-    title: 'Save Smarter. Live Better. ��',
+    title: 'Save Smarter. Live Better. 💚',
     subtitle: 'Join 10,000+ Bangladeshis taking control',
     description: 'Free forever. Start in 30 seconds.',
     icon: 'rocket',
     gradient: ['#8b5cf6', '#ec4899'],
-    illustration: 'cta',
   },
 ];
 
@@ -96,7 +87,6 @@ export default function OnboardingScreen() {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Animations work on both web and mobile with adaptive native driver
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -113,7 +103,6 @@ export default function OnboardingScreen() {
   }, [currentIndex]);
 
   const handleNext = async () => {
-    // Haptics only on mobile (web doesn't support it)
     if (Platform.OS !== 'web') {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -156,9 +145,7 @@ export default function OnboardingScreen() {
     setCurrentIndex(index);
   };
 
-  const renderSlide = (slide: Slide, index: number) => {
-    const isActive = currentIndex === index;
-
+  const renderSlide = (slide: Slide) => {
     return (
       <View key={slide.id} style={styles.slide}>
         <LinearGradient
@@ -178,7 +165,7 @@ export default function OnboardingScreen() {
           >
             <View style={styles.illustrationContainer}>
               <View style={styles.iconCircle}>
-                <Ionicons name={slide.icon} size={80} color="#fff" />
+                <Icon name={slide.icon} size={80} color="#fff" />
               </View>
             </View>
 
@@ -210,7 +197,7 @@ export default function OnboardingScreen() {
         scrollEventThrottle={16}
         style={styles.scrollView}
       >
-        {slides.map((slide, index) => renderSlide(slide, index))}
+        {slides.map((slide) => renderSlide(slide))}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -236,7 +223,7 @@ export default function OnboardingScreen() {
             <Text style={styles.nextButtonText}>
               {currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
             </Text>
-            <Ionicons
+            <Icon
               name={currentIndex === slides.length - 1 ? 'checkmark' : 'arrow-forward'}
               size={20}
               color="#fff"
