@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   googleText: { color: '#1f2937', fontSize: 16, fontWeight: '600' },
   dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
-  divider: { flex: 1, height: 1, backgroundColor: '#005864' },
+  divider: { flex: 1, height: 1, backgroundColor: '#17BEBB' },
   dividerText: { color: '#94a3b8', marginHorizontal: 16, fontSize: 14 },
   inputContainer: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#005864', borderRadius: 16,
