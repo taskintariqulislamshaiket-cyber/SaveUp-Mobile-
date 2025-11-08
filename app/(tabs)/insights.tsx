@@ -10,8 +10,9 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '../../src/components/Icon';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../src/config/firebase-config';
 import { useRouter } from 'expo-router';
@@ -30,6 +31,7 @@ const PERSONALITY_EMOJIS: Record<string, string> = {
 
 export default function InsightsScreen() {
   const { user, userProfile } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,14 +144,14 @@ export default function InsightsScreen() {
   const spendingRate = monthlyIncome > 0 ? (totalSpent / monthlyIncome) * 100 : 0;
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <View>
-          <Text style={styles.title}>Insights</Text>
-          <Text style={styles.subtitle}>Smart money advice for you 💡</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Insights</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Smart money advice for you 💡</Text>
         </View>
         <TouchableOpacity 
-          style={styles.personalityBadge}
+          style={[styles.personalityBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={async () => {
             if (Platform.OS !== 'web') {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -165,7 +167,7 @@ export default function InsightsScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00D4A1" />
         }
       >
         {/* Personality Card */}
@@ -178,7 +180,7 @@ export default function InsightsScreen() {
             }
           ]}
         >
-          <LinearGradient colors={['#6366f1', '#8b5cf6']} style={styles.personalityGradient}>
+          <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.personalityGradient}>
             <Text style={styles.personalityCardEmoji}>{personalityEmoji}</Text>
             <Text style={styles.personalityCardTitle}>The {personalityName}</Text>
             <Text style={styles.personalityCardSubtitle}>
@@ -206,28 +208,29 @@ export default function InsightsScreen() {
         <Animated.View 
           style={[
             styles.overviewCard,
+            { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 },
             {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
             }
           ]}
         >
-          <Text style={styles.sectionTitle}>📊 Spending Overview</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>📊 Spending Overview</Text>
           <View style={styles.overviewContent}>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>This Month</Text>
-              <Text style={styles.overviewValue}>৳{totalSpent.toFixed(0)}</Text>
-              <Text style={styles.overviewHint}>{monthlyExpenses.length} transactions</Text>
+            <View style={[styles.overviewItem, { backgroundColor: colors.background }]}>
+              <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>This Month</Text>
+              <Text style={[styles.overviewValue, { color: colors.text }]}>৳{totalSpent.toFixed(0)}</Text>
+              <Text style={[styles.overviewHint, { color: colors.textSecondary }]}>{monthlyExpenses.length} transactions</Text>
             </View>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Spending Rate</Text>
+            <View style={[styles.overviewItem, { backgroundColor: colors.background }]}>
+              <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Spending Rate</Text>
               <Text style={[
                 styles.overviewValue,
                 { color: spendingRate > 80 ? '#ef4444' : spendingRate > 60 ? '#f59e0b' : '#10b981' }
               ]}>
                 {spendingRate.toFixed(0)}%
               </Text>
-              <Text style={styles.overviewHint}>of income</Text>
+              <Text style={[styles.overviewHint, { color: colors.textSecondary }]}>of income</Text>
             </View>
           </View>
         </Animated.View>
@@ -258,7 +261,7 @@ export default function InsightsScreen() {
                     ? ['#f59e0b', '#d97706']
                     : insight.type === 'success'
                     ? ['#10b981', '#059669']
-                    : ['#8b5cf6', '#7c3aed']
+                    : ['#00D4A1', '#4CAF50']
                 }
                 style={styles.insightGradient}
               >
@@ -280,15 +283,15 @@ export default function InsightsScreen() {
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🎯</Text>
-            <Text style={styles.emptyText}>No insights yet</Text>
-            <Text style={styles.emptySubtext}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No insights yet</Text>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
               Start tracking expenses to get personalized insights
             </Text>
             <TouchableOpacity 
               onPress={() => router.push('/(tabs)/expenses')}
               style={styles.addExpenseButton}
             >
-              <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.addExpenseGradient}>
+              <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.addExpenseGradient}>
                 <Text style={styles.addExpenseText}>Track Your First Expense</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -297,56 +300,56 @@ export default function InsightsScreen() {
 
         {/* Money Tips */}
         <View style={styles.tipsSection}>
-          <Text style={styles.sectionTitle}>💰 Money Tips for {personalityName}s</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>💰 Money Tips for {personalityName}s</Text>
           
           {userProfile?.personalityType === 'guardian' && (
             <>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>🛡️</Text>
-                <Text style={styles.tipText}>Build an emergency fund covering 6 months of expenses</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Build an emergency fund covering 6 months of expenses</Text>
               </View>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>📊</Text>
-                <Text style={styles.tipText}>Consider low-risk investments like bonds or fixed deposits</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Consider low-risk investments like bonds or fixed deposits</Text>
               </View>
             </>
           )}
 
           {userProfile?.personalityType === 'strategist' && (
             <>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>🧠</Text>
-                <Text style={styles.tipText}>Diversify investments across different asset classes</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Diversify investments across different asset classes</Text>
               </View>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>📈</Text>
-                <Text style={styles.tipText}>Track your ROI and rebalance portfolio quarterly</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Track your ROI and rebalance portfolio quarterly</Text>
               </View>
             </>
           )}
 
           {userProfile?.personalityType === 'realist' && (
             <>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>⚖️</Text>
-                <Text style={styles.tipText}>Follow the 50/30/20 rule: needs, wants, savings</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Follow the 50/30/20 rule: needs, wants, savings</Text>
               </View>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>💡</Text>
-                <Text style={styles.tipText}>Review your budget monthly and adjust as needed</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Review your budget monthly and adjust as needed</Text>
               </View>
             </>
           )}
 
           {userProfile?.personalityType === 'enjoyer' && (
             <>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>🎉</Text>
-                <Text style={styles.tipText}>Set aside a "fun money" budget to enjoy guilt-free</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Set aside a "fun money" budget to enjoy guilt-free</Text>
               </View>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>🎯</Text>
-                <Text style={styles.tipText}>Automate savings so you can spend the rest freely</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Automate savings so you can spend the rest freely</Text>
               </View>
             </>
           )}
@@ -354,23 +357,23 @@ export default function InsightsScreen() {
           {(!userProfile?.personalityType || 
             !['guardian', 'strategist', 'realist', 'enjoyer'].includes(userProfile?.personalityType)) && (
             <>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>💡</Text>
-                <Text style={styles.tipText}>Track every expense to understand your spending patterns</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Track every expense to understand your spending patterns</Text>
               </View>
-              <View style={styles.tipCard}>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <Text style={styles.tipIcon}>🎯</Text>
-                <Text style={styles.tipText}>Set clear financial goals and review them monthly</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Set clear financial goals and review them monthly</Text>
               </View>
-              <View style={styles.tipCard}>
-                <Text style={styles.tipIcon}>📊</Text>
-                <Text style={styles.tipText}>Save at least 20% of your income consistently</Text>
+              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
+                <Text style={styles.tipIcon}>��</Text>
+                <Text style={[styles.tipText, { color: colors.text }]}>Save at least 20% of your income consistently</Text>
               </View>
             </>
           )}
         </View>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -378,9 +381,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
-  subtitle: { fontSize: 14, color: '#94a3b8', marginTop: 4 },
-  personalityBadge: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#334155' },
+  title: { fontSize: 32, fontWeight: 'bold' },
+  subtitle: { fontSize: 14, marginTop: 4 },
+  personalityBadge: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', borderWidth: 3 },
   personalityEmoji: { fontSize: 32 },
   personalityCard: { marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden' },
   personalityGradient: { padding: 32, alignItems: 'center' },
@@ -389,13 +392,13 @@ const styles = StyleSheet.create({
   personalityCardSubtitle: { fontSize: 14, color: '#fff', opacity: 0.9, textAlign: 'center', marginBottom: 16 },
   takeQuizButton: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20, marginTop: 8 },
   takeQuizText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  overviewCard: { marginHorizontal: 20, marginBottom: 20, backgroundColor: '#1e293b', borderRadius: 20, padding: 20 },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 16 },
+  overviewCard: { marginHorizontal: 20, marginBottom: 20, borderRadius: 20, padding: 20 },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
   overviewContent: { flexDirection: 'row', gap: 16 },
-  overviewItem: { flex: 1, backgroundColor: '#0f172a', padding: 16, borderRadius: 12 },
-  overviewLabel: { fontSize: 12, color: '#94a3b8', marginBottom: 8 },
-  overviewValue: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
-  overviewHint: { fontSize: 11, color: '#64748b' },
+  overviewItem: { flex: 1, padding: 16, borderRadius: 12 },
+  overviewLabel: { fontSize: 12, marginBottom: 8 },
+  overviewValue: { fontSize: 28, fontWeight: 'bold', marginBottom: 4 },
+  overviewHint: { fontSize: 11 },
   insightCard: { marginHorizontal: 20, marginBottom: 16, borderRadius: 20, overflow: 'hidden' },
   insightGradient: { padding: 24 },
   insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
@@ -406,13 +409,13 @@ const styles = StyleSheet.create({
   insightMessage: { fontSize: 15, color: '#fff', opacity: 0.95, lineHeight: 22 },
   emptyState: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 40 },
   emptyIcon: { fontSize: 64, marginBottom: 16 },
-  emptyText: { fontSize: 18, fontWeight: '600', color: '#94a3b8', marginBottom: 8 },
-  emptySubtext: { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 24 },
+  emptyText: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
+  emptySubtext: { fontSize: 14, textAlign: 'center', marginBottom: 24 },
   addExpenseButton: { borderRadius: 16, overflow: 'hidden' },
   addExpenseGradient: { paddingVertical: 16, paddingHorizontal: 32 },
   addExpenseText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   tipsSection: { padding: 20, paddingBottom: 40 },
-  tipCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', padding: 16, borderRadius: 16, marginBottom: 12 },
+  tipCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 12 },
   tipIcon: { fontSize: 32, marginRight: 16 },
-  tipText: { flex: 1, fontSize: 14, color: '#e2e8f0', lineHeight: 20 },
+  tipText: { flex: 1, fontSize: 14, lineHeight: 20 },
 });

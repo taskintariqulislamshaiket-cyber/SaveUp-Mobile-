@@ -14,14 +14,16 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '../../src/components/Icon';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../src/config/firebase-config';
 import * as Haptics from 'expo-haptics';
 
 export default function GoalsScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -175,11 +177,11 @@ export default function GoalsScreen() {
   const overallProgress = totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0;
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <View>
-          <Text style={styles.title}>Goals</Text>
-          <Text style={styles.subtitle}>Dream big, save smart 🎯</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Goals</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Dream big, save smart 🎯</Text>
         </View>
         <TouchableOpacity
           onPress={async () => {
@@ -190,8 +192,8 @@ export default function GoalsScreen() {
           }}
           style={styles.addButton}
         >
-          <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.addGradient}>
-            <Ionicons name="add" size={28} color="#fff" />
+          <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.addGradient}>
+            <Icon name="add" size={28} color="#fff" />
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
@@ -200,8 +202,8 @@ export default function GoalsScreen() {
       <Animated.View style={[styles.summarySection, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
-            <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.summaryGradient}>
-              <Ionicons name="trophy" size={28} color="#fff" />
+            <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.summaryGradient}>
+              <Icon name="trophy" size={28} color="#fff" />
               <Text style={styles.summaryLabel}>Target</Text>
               <Text style={styles.summaryValue}>৳{totalTarget.toFixed(0)}</Text>
             </LinearGradient>
@@ -209,7 +211,7 @@ export default function GoalsScreen() {
 
           <View style={styles.summaryCard}>
             <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.summaryGradient}>
-              <Ionicons name="wallet" size={28} color="#fff" />
+              <Icon name="wallet" size={28} color="#fff" />
               <Text style={styles.summaryLabel}>Saved</Text>
               <Text style={styles.summaryValue}>৳{totalSaved.toFixed(0)}</Text>
             </LinearGradient>
@@ -219,7 +221,7 @@ export default function GoalsScreen() {
         <View style={styles.progressCard}>
           <LinearGradient colors={['#10b981', '#059669']} style={styles.progressGradient}>
             <View style={styles.progressHeader}>
-              <Ionicons name="trending-up" size={32} color="#fff" />
+              <Icon name="trending-up" size={32} color="#fff" />
               <Text style={styles.progressPercentage}>{overallProgress.toFixed(0)}%</Text>
             </View>
             <Text style={styles.progressLabel}>Overall Progress</Text>
@@ -244,6 +246,7 @@ export default function GoalsScreen() {
               key={goal.id} 
               style={[
                 styles.goalCard,
+                { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 },
                 {
                   opacity: fadeAnim,
                   transform: [{
@@ -257,19 +260,19 @@ export default function GoalsScreen() {
             >
               <View style={styles.goalHeader}>
                 <View style={styles.goalTitleRow}>
-                  <Text style={styles.goalName}>{goal.name}</Text>
+                  <Text style={[styles.goalName, { color: colors.text }]}>{goal.name}</Text>
                   <TouchableOpacity
                     onPress={() => handleDeleteGoal(goal.id, goal.name)}
                     style={styles.deleteButton}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                    <Icon name="trash-outline" size={20} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.goalMetaRow}>
                   <View style={styles.goalMeta}>
-                    <Ionicons name="calendar-outline" size={14} color="#94a3b8" />
-                    <Text style={styles.goalMetaText}>
+                    <Icon name="calendar-outline" size={14} color={colors.textSecondary} />
+                    <Text style={[styles.goalMetaText, { color: colors.textSecondary }]}>
                       {daysLeft > 0 ? `${daysLeft} days left` : daysLeft === 0 ? 'Today!' : 'Overdue'}
                     </Text>
                   </View>
@@ -277,15 +280,15 @@ export default function GoalsScreen() {
                 </View>
               </View>
 
-              <View style={styles.progressBar}>
+              <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
                 <LinearGradient
-                  colors={['#8b5cf6', '#ec4899']}
+                  colors={['#00D4A1', '#4CAF50']}
                   style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
                 />
               </View>
 
               <View style={styles.goalFooter}>
-                <Text style={styles.goalAmount}>
+                <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>
                   ৳{saved.toLocaleString('en-BD')} / ৳{target.toLocaleString('en-BD')}
                 </Text>
               </View>
@@ -296,12 +299,12 @@ export default function GoalsScreen() {
         {goals.length === 0 && !loading && (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconContainer}>
-              <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.emptyIconGradient}>
-                <Ionicons name="trophy" size={64} color="#fff" />
+              <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.emptyIconGradient}>
+                <Icon name="trophy" size={64} color="#fff" />
               </LinearGradient>
             </View>
-            <Text style={styles.emptyText}>No goals yet</Text>
-            <Text style={styles.emptySubtext}>Set your first goal and start saving!</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No goals yet</Text>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Set your first goal and start saving!</Text>
           </View>
         )}
       </ScrollView>
@@ -310,71 +313,71 @@ export default function GoalsScreen() {
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalContainer}>
           <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setModalVisible(false)} />
-          <View style={[styles.modalContent, { marginBottom: keyboardHeight }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, marginBottom: keyboardHeight }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>New Goal 🎯</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>New Goal 🎯</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close-circle" size={32} color="#94a3b8" />
+                <Icon name="close-circle" size={32} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>Goal Name</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="flag" size={20} color="#8b5cf6" style={styles.inputIcon} />
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Goal Name</Text>
+              <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Icon name="flag" size={20} color="#00D4A1" style={styles.inputIcon} />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text }]}
                   placeholder="e.g., New Laptop"
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor={colors.textSecondary}
                   value={goalName}
                   onChangeText={setGoalName}
                 />
               </View>
 
-              <Text style={styles.inputLabel}>Target Amount (৳)</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="cash" size={20} color="#8b5cf6" style={styles.inputIcon} />
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Target Amount (৳)</Text>
+              <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Icon name="cash" size={20} color="#00D4A1" style={styles.inputIcon} />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text }]}
                   placeholder="e.g., 50000"
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor={colors.textSecondary}
                   value={targetAmount}
                   onChangeText={setTargetAmount}
                   keyboardType="numeric"
                 />
               </View>
 
-              <Text style={styles.inputLabel}>Target Date</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="calendar" size={20} color="#8b5cf6" style={styles.inputIcon} />
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Target Date</Text>
+              <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Icon name="calendar" size={20} color="#00D4A1" style={styles.inputIcon} />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text }]}
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor={colors.textSecondary}
                   value={deadline}
                   onChangeText={setDeadline}
                 />
               </View>
 
               <TouchableOpacity onPress={handleAddGoal} activeOpacity={0.8}>
-                <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.submitButton}>
+                <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.submitButton}>
                   <Text style={styles.submitText}>Create Goal</Text>
-                  <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                  <Icon name="checkmark-circle" size={24} color="#fff" />
                 </LinearGradient>
               </TouchableOpacity>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 60 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
-  subtitle: { fontSize: 14, color: '#94a3b8', marginTop: 4 },
+  title: { fontSize: 32, fontWeight: 'bold' },
+  subtitle: { fontSize: 14, marginTop: 4 },
   addButton: { borderRadius: 25, overflow: 'hidden' },
   addGradient: { width: 56, height: 56, justifyContent: 'center', alignItems: 'center' },
   summarySection: { paddingHorizontal: 20, marginBottom: 20 },
@@ -391,33 +394,33 @@ const styles = StyleSheet.create({
   progressBarContainer: { height: 12, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#fff', borderRadius: 6 },
   list: { flex: 1, paddingHorizontal: 20 },
-  goalCard: { backgroundColor: '#1e293b', padding: 20, borderRadius: 20, marginBottom: 16 },
+  goalCard: { padding: 20, borderRadius: 20, marginBottom: 16 },
   goalHeader: { marginBottom: 16 },
   goalTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  goalName: { fontSize: 20, fontWeight: 'bold', color: '#fff', flex: 1 },
+  goalName: { fontSize: 20, fontWeight: 'bold', flex: 1 },
   deleteButton: { backgroundColor: '#2d1a1a', padding: 10, borderRadius: 10 },
   goalMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   goalMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  goalMetaText: { fontSize: 12, color: '#94a3b8' },
-  goalProgress: { fontSize: 18, fontWeight: 'bold', color: '#8b5cf6' },
-  progressBar: { height: 10, backgroundColor: '#334155', borderRadius: 5, overflow: 'hidden', marginBottom: 12 },
+  goalMetaText: { fontSize: 12 },
+  goalProgress: { fontSize: 18, fontWeight: 'bold', color: '#00D4A1' },
+  progressBar: { height: 10, borderRadius: 5, overflow: 'hidden', marginBottom: 12 },
   progressFill: { height: '100%', borderRadius: 5 },
   goalFooter: {},
-  goalAmount: { fontSize: 14, color: '#94a3b8', fontWeight: '600' },
+  goalAmount: { fontSize: 14, fontWeight: '600' },
   emptyState: { alignItems: 'center', paddingVertical: 60 },
   emptyIconContainer: { marginBottom: 24, borderRadius: 40, overflow: 'hidden' },
   emptyIconGradient: { width: 80, height: 80, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 18, fontWeight: '600', color: '#94a3b8', marginTop: 16 },
-  emptySubtext: { fontSize: 14, color: '#64748b', marginTop: 8 },
+  emptyText: { fontSize: 18, fontWeight: '600', marginTop: 16 },
+  emptySubtext: { fontSize: 14, marginTop: 8 },
   modalContainer: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' },
-  modalContent: { backgroundColor: '#1e293b', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, maxHeight: '90%' },
+  modalContent: { borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  modalTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  inputLabel: { fontSize: 14, fontWeight: '600', color: '#e2e8f0', marginBottom: 8, marginTop: 16 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f172a', borderRadius: 16, paddingHorizontal: 16, height: 56, borderWidth: 2, borderColor: '#334155' },
+  modalTitle: { fontSize: 24, fontWeight: 'bold' },
+  inputLabel: { fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 16 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, paddingHorizontal: 16, height: 56, borderWidth: 2 },
   inputIcon: { marginRight: 12 },
-  input: { flex: 1, color: '#fff', fontSize: 16 },
+  input: { flex: 1, fontSize: 16 },
   submitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56, borderRadius: 16, gap: 8, marginTop: 24, marginBottom: 16 },
   submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 });

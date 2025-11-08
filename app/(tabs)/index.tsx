@@ -11,8 +11,9 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '../../src/components/Icon';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../src/config/firebase-config';
 import { useRouter } from 'expo-router';
@@ -27,7 +28,7 @@ import CategoryPieChart from '../../src/components/CategoryPieChart';
 const PERSONALITY_TYPES = {
   starter: {
     title: "The Starter",
-    emoji: "🌱",
+    emoji: "��",
     description: "Every journey begins with a single step. Set up your income to unlock insights!",
     tip: "Complete your profile to see your money personality!",
     gradient: ['#10b981', '#34d399'],
@@ -37,7 +38,7 @@ const PERSONALITY_TYPES = {
     emoji: "🐿️",
     description: "You're amazing at keeping money aside. Your future self will thank you!",
     tip: "You're a natural saver. Consider investing for even better returns!",
-    gradient: ['#6366f1', '#8b5cf6'],
+    gradient: ['#00D4A1', '#4CAF50'],
   },
   strategist: {
     title: "The Strategist",
@@ -71,6 +72,7 @@ const PERSONALITY_TYPES = {
 
 export default function Dashboard() {
   const { user, userProfile } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
@@ -142,10 +144,10 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8b5cf6" />
-        <Text style={styles.loadingText}>Loading your financial universe...</Text>
-      </LinearGradient>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color="#00D4A1" />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your financial universe...</Text>
+      </View>
     );
   }
 
@@ -203,23 +205,23 @@ export default function Dashboard() {
                       (userProfile?.otherInvestments || 0);
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00D4A1" />
         }
       >
         {/* SaveUp Logo Header */}
         <Animated.View style={[styles.logoHeader, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.logoContainer}>
-            <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.logoCircle}>
+            <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.logoCircle}>
               <Text style={styles.logoEmoji}>💰</Text>
             </LinearGradient>
             <View>
-              <Text style={styles.logoText}>SaveUp</Text>
-              <Text style={styles.logoSubtext}>Bangladesh's smartest money tracker</Text>
+              <Text style={[styles.logoText, { color: colors.text }]}>SaveUp</Text>
+              <Text style={[styles.logoSubtext, { color: colors.textSecondary }]}>Bangladesh's smartest money tracker</Text>
             </View>
           </View>
         </Animated.View>
@@ -231,7 +233,7 @@ export default function Dashboard() {
             <Text style={styles.personalityTitle}>{personality.title}</Text>
             <Text style={styles.personalityDesc}>{personality.description}</Text>
             <View style={styles.personalityTip}>
-              <Ionicons name="bulb" size={20} color="#fff" />
+              <Icon name="bulb" size={20} color="#fff" />
               <Text style={styles.personalityTipText}>{personality.tip}</Text>
             </View>
           </LinearGradient>
@@ -247,7 +249,7 @@ export default function Dashboard() {
         {/* Big Stats */}
         <View style={styles.statsGrid}>
           <View style={styles.statRow}>
-            <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.statCard}>
+            <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.statCard}>
               <Text style={styles.statEmoji}>💰</Text>
               <Text style={styles.statLabel}>{currentMonth.toUpperCase()}{'\n'}BUDGET</Text>
               <Text style={styles.statValue}>৳{(monthlyIncome ?? 0).toLocaleString('en-BD')}</Text>
@@ -288,7 +290,7 @@ export default function Dashboard() {
         </View>
 
         {/* Payday Banner */}
-        <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.paydayBanner}>
+        <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.paydayBanner}>
           <Text style={styles.paydayTitle}>
             {daysUntilSalary === 0 ? '🎉 Salary Day!' : `${daysUntilSalary} days until payday`}
           </Text>
@@ -302,20 +304,20 @@ export default function Dashboard() {
 
         {/* Safety Net */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🛡️ Your Safety Net</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>��️ Your Safety Net</Text>
           <View style={styles.safetyGrid}>
-            <View style={styles.safetyCard}>
-              <Text style={styles.safetyLabel}>Cash Ready</Text>
-              <Text style={styles.safetyValue}>৳{(userProfile?.existingSavings ?? 0).toLocaleString('en-BD')}</Text>
-              <Text style={styles.safetyDesc}>bKash, bank, pocket</Text>
+            <View style={[styles.safetyCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
+              <Text style={[styles.safetyLabel, { color: colors.textSecondary }]}>Cash Ready</Text>
+              <Text style={[styles.safetyValue, { color: colors.text }]}>৳{(userProfile?.existingSavings ?? 0).toLocaleString('en-BD')}</Text>
+              <Text style={[styles.safetyDesc, { color: colors.textSecondary }]}>bKash, bank, pocket</Text>
             </View>
-            <View style={styles.safetyCard}>
-              <Text style={styles.safetyLabel}>Locked (FDR)</Text>
-              <Text style={styles.safetyValue}>৳{(userProfile?.existingFDR ?? 0).toLocaleString('en-BD')}</Text>
-              <Text style={styles.safetyDesc}>Growing with interest</Text>
+            <View style={[styles.safetyCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
+              <Text style={[styles.safetyLabel, { color: colors.textSecondary }]}>Locked (FDR)</Text>
+              <Text style={[styles.safetyValue, { color: colors.text }]}>৳{(userProfile?.existingFDR ?? 0).toLocaleString('en-BD')}</Text>
+              <Text style={[styles.safetyDesc, { color: colors.textSecondary }]}>Growing with interest</Text>
             </View>
           </View>
-          <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.totalWealthCard}>
+          <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.totalWealthCard}>
             <Text style={styles.totalWealthLabel}>Total Wealth</Text>
             <Text style={styles.totalWealthValue}>৳{(totalWealth ?? 0).toLocaleString('en-BD')}</Text>
             <Text style={styles.totalWealthDesc}>Building your future! 🚀</Text>
@@ -326,7 +328,7 @@ export default function Dashboard() {
         {topGoals.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>🎯 Your Dreams</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>🎯 Your Dreams</Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/goals')}>
                 <Text style={styles.seeAll}>See All →</Text>
               </TouchableOpacity>
@@ -334,20 +336,20 @@ export default function Dashboard() {
             {topGoals.map(goal => {
               const progress = (goal.saved / goal.targetAmount) * 100;
               return (
-                <View key={goal.id} style={styles.goalCard}>
+                <View key={goal.id} style={[styles.goalCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                   <View style={styles.goalHeader}>
-                    <Text style={styles.goalName}>{goal.name}</Text>
+                    <Text style={[styles.goalName, { color: colors.text }]}>{ goal.name}</Text>
                     <Text style={styles.goalProgress}>{Math.round(progress)}%</Text>
                   </View>
-                  <View style={styles.goalProgressBar}>
+                  <View style={[styles.goalProgressBar, { backgroundColor: colors.border }]}>
                     <LinearGradient
-                      colors={['#8b5cf6', '#ec4899']}
+                      colors={['#00D4A1', '#4CAF50']}
                       style={[styles.goalProgressFill, { width: `${Math.min(progress, 100)}%` }]}
                     />
                   </View>
                   <View style={styles.goalFooter}>
-                    <Text style={styles.goalAmount}>৳{(goal.saved ?? 0).toLocaleString('en-BD')}</Text>
-                    <Text style={styles.goalTarget}>of ৳{(goal.targetAmount ?? 0).toLocaleString('en-BD')}</Text>
+                    <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>৳{(goal.saved ?? 0).toLocaleString('en-BD')}</Text>
+                    <Text style={[styles.goalTarget, { color: colors.textSecondary }]}>of ৳{(goal.targetAmount ?? 0).toLocaleString('en-BD')}</Text>
                   </View>
                 </View>
               );
@@ -358,7 +360,7 @@ export default function Dashboard() {
         {/* Recent Expenses */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>💸 Where'd Your Money Go?</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>💸 Where'd Your Money Go?</Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/expenses')}>
               <Text style={styles.seeAll}>See All →</Text>
             </TouchableOpacity>
@@ -367,15 +369,15 @@ export default function Dashboard() {
           {recentExpenses.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>🤷</Text>
-              <Text style={styles.emptyText}>No expenses yet!</Text>
-              <Text style={styles.emptyHint}>Start tracking to see your spending patterns</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No expenses yet!</Text>
+              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>Start tracking to see your spending patterns</Text>
             </View>
           ) : (
             recentExpenses.map(expense => (
-              <View key={expense.id} style={styles.expenseItem}>
+              <View key={expense.id} style={[styles.expenseItem, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                 <View style={styles.expenseLeft}>
-                  <Text style={styles.expenseCategory}>{expense.category}</Text>
-                  <Text style={styles.expenseDate}>
+                  <Text style={[styles.expenseCategory, { color: colors.text }]}>{expense.category}</Text>
+                  <Text style={[styles.expenseDate, { color: colors.textSecondary }]}>
                     {new Date(expense.date).toLocaleDateString('en-GB', { 
                       day: 'numeric', 
                       month: 'short' 
@@ -390,21 +392,21 @@ export default function Dashboard() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: '#94a3b8', marginTop: 16, fontSize: 14 },
+  loadingText: { marginTop: 16, fontSize: 14 },
   scrollView: { flex: 1 },
   logoHeader: { padding: 20, paddingTop: 60 },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   logoCircle: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   logoEmoji: { fontSize: 28 },
-  logoText: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  logoSubtext: { fontSize: 11, color: '#94a3b8' },
+  logoText: { fontSize: 24, fontWeight: 'bold' },
+  logoSubtext: { fontSize: 11 },
   personalityHero: { marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden' },
   personalityGradient: { padding: 32, alignItems: 'center' },
   personalityEmoji: { fontSize: 64, marginBottom: 12 },
@@ -428,33 +430,33 @@ const styles = StyleSheet.create({
   paydaySubtitle: { fontSize: 14, color: '#fff', opacity: 0.9 },
   section: { paddingHorizontal: 20, marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  seeAll: { fontSize: 14, color: '#8b5cf6', fontWeight: '600' },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold' },
+  seeAll: { fontSize: 14, color: '#00D4A1', fontWeight: '600' },
   safetyGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  safetyCard: { flex: 1, backgroundColor: '#1e293b', padding: 16, borderRadius: 16 },
-  safetyLabel: { fontSize: 12, color: '#94a3b8', marginBottom: 8 },
-  safetyValue: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
-  safetyDesc: { fontSize: 11, color: '#64748b' },
+  safetyCard: { flex: 1, padding: 16, borderRadius: 16 },
+  safetyLabel: { fontSize: 12, marginBottom: 8 },
+  safetyValue: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
+  safetyDesc: { fontSize: 11 },
   totalWealthCard: { padding: 20, borderRadius: 16, alignItems: 'center' },
   totalWealthLabel: { fontSize: 13, color: '#fff', fontWeight: '600', marginBottom: 8, opacity: 0.9 },
   totalWealthValue: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
   totalWealthDesc: { fontSize: 12, color: '#fff', opacity: 0.85 },
-  goalCard: { backgroundColor: '#1e293b', padding: 16, borderRadius: 16, marginBottom: 12 },
+  goalCard: { padding: 16, borderRadius: 16, marginBottom: 12 },
   goalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  goalName: { fontSize: 16, fontWeight: '600', color: '#fff' },
-  goalProgress: { fontSize: 16, fontWeight: 'bold', color: '#8b5cf6' },
-  goalProgressBar: { height: 8, backgroundColor: '#334155', borderRadius: 4, overflow: 'hidden', marginBottom: 12 },
+  goalName: { fontSize: 16, fontWeight: '600' },
+  goalProgress: { fontSize: 16, fontWeight: 'bold', color: '#00D4A1' },
+  goalProgressBar: { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 12 },
   goalProgressFill: { height: '100%', borderRadius: 4 },
   goalFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  goalAmount: { fontSize: 13, color: '#94a3b8', fontWeight: '600' },
-  goalTarget: { fontSize: 13, color: '#64748b' },
-  expenseItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1e293b', padding: 16, borderRadius: 12, marginBottom: 8 },
+  goalAmount: { fontSize: 13, fontWeight: '600' },
+  goalTarget: { fontSize: 13 },
+  expenseItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 8 },
   expenseLeft: { flex: 1 },
-  expenseCategory: { fontSize: 15, fontWeight: '600', color: '#fff', marginBottom: 4 },
-  expenseDate: { fontSize: 12, color: '#94a3b8' },
+  expenseCategory: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
+  expenseDate: { fontSize: 12 },
   expenseAmount: { fontSize: 16, fontWeight: 'bold', color: '#ef4444' },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
   emptyEmoji: { fontSize: 64, marginBottom: 12 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#94a3b8', marginBottom: 8 },
-  emptyHint: { fontSize: 13, color: '#64748b', textAlign: 'center' },
+  emptyText: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
+  emptyHint: { fontSize: 13, textAlign: 'center' },
 });
