@@ -48,20 +48,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const colors = theme === 'dark' 
     ? {
-        background: '#004D00',
-        surface: '#005864',
-        primary: '#00D4A1',
-        text: '#ffffff',
-        textSecondary: '#E0F7F1',
-        border: '#17BEBB',
+        // ✅ DARK MODE - Like Image 2
+        background: '#0f172a',      // Dark navy (was #004D00 bright green ❌)
+        surface: '#1e293b',         // Slightly lighter navy
+        primary: '#00D4A1',         // Teal accent
+        text: '#ffffff',            // White text
+        textSecondary: '#94a3b8',   // Light gray text
+        border: '#334155',          // Dark gray border
       }
     : {
-        background: '#E0F7F1',
-        surface: '#ffffff',
-        primary: '#00D4A1',
-        text: '#004D00',
-        textSecondary: '#005864',
-        border: '#8BD3C7',
+        // ✅ LIGHT MODE - Like Image 3
+        background: '#E0F7F1',      // Light mint
+        surface: '#ffffff',         // White cards
+        primary: '#00D4A1',         // Teal accent
+        text: '#004D00',            // Dark green text
+        textSecondary: '#005864',   // Dark teal text
+        border: '#8BD3C7',          // Light teal border
       };
 
   return (
