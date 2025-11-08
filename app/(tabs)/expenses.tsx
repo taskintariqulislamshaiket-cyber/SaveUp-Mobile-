@@ -14,7 +14,7 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '../../src/components/Icon';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { db } from '../../src/config/firebase-config';
@@ -204,14 +204,14 @@ export default function ExpensesScreen() {
           style={styles.addButton}
         >
           <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.addGradient}>
-            <Ionicons name="add" size={28} color="#fff" />
+            <Icon name="add" size={28} color="#fff" />
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
 
       <Animated.View style={[styles.totalCard, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.totalGradient}>
-          <Ionicons name="wallet" size={36} color="#fff" style={styles.totalIcon} />
+          <Icon name="wallet" size={36} color="#fff" style={styles.totalIcon} />
           <Text style={styles.totalLabel}>Total Spent</Text>
           <Text style={styles.totalAmount}>৳{totalSpent.toFixed(0)}</Text>
           <View style={styles.badge}>
@@ -240,7 +240,7 @@ export default function ExpensesScreen() {
               ]}
             >
               <View style={[styles.categoryIcon, { backgroundColor: category.color + '20' }]}>
-                <Ionicons name={category.icon as any} size={26} color={category.color} />
+                <Icon name={category.icon} size={26} color={category.color} />
               </View>
               <View style={styles.expenseDetails}>
                 <Text style={styles.expenseDescription}>{expense.description}</Text>
@@ -258,7 +258,7 @@ export default function ExpensesScreen() {
                   onPress={() => handleDeleteExpense(expense.id)}
                   style={styles.deleteBtn}
                 >
-                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  <Icon name="trash-outline" size={18} color="#ef4444" />
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -281,14 +281,14 @@ export default function ExpensesScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Expense 💸</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close-circle" size={32} color="#94a3b8" />
+                <Icon name="close-circle" size={32} color="#94a3b8" />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.inputLabel}>Amount (৳)</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="cash" size={20} color="#8b5cf6" style={styles.inputIcon} />
+                <Icon name="cash" size={20} color="#8b5cf6" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="e.g., 500"
@@ -301,7 +301,7 @@ export default function ExpensesScreen() {
 
               <Text style={styles.inputLabel}>Description</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="create" size={20} color="#8b5cf6" style={styles.inputIcon} />
+                <Icon name="create" size={20} color="#8b5cf6" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="e.g., Lunch at restaurant"
@@ -325,7 +325,7 @@ export default function ExpensesScreen() {
                       selectedCategory === cat.name && { backgroundColor: cat.color, borderColor: cat.color },
                     ]}
                   >
-                    <Ionicons name={cat.icon as any} size={24} color={selectedCategory === cat.name ? '#fff' : cat.color} />
+                    <Icon name={cat.icon} size={24} color={selectedCategory === cat.name ? '#fff' : cat.color} />
                     <Text style={[styles.categoryButtonText, selectedCategory === cat.name && { color: '#fff' }]}>
                       {cat.name}
                     </Text>
@@ -336,7 +336,7 @@ export default function ExpensesScreen() {
               <TouchableOpacity onPress={handleAddExpense} activeOpacity={0.8}>
                 <LinearGradient colors={['#8b5cf6', '#ec4899']} style={styles.submitButton}>
                   <Text style={styles.submitText}>Add Expense</Text>
-                  <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                  <Icon name="checkmark-circle" size={24} color="#fff" />
                 </LinearGradient>
               </TouchableOpacity>
             </ScrollView>

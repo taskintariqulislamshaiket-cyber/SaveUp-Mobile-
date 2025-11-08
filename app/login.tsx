@@ -12,7 +12,7 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '../src/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../src/contexts/AuthContext';
@@ -86,7 +86,6 @@ export default function LoginPage() {
     outputRange: ['0deg', '360deg'],
   });
 
-  // ✅ Fixed handleAuth with proper loading control and Firebase delay
   const handleAuth = async () => {
     setError('');
 
@@ -118,7 +117,6 @@ export default function LoginPage() {
         await signUp(email.trim(), password);
       }
 
-      // ⏳ Wait briefly for Firebase auth state to propagate
       await new Promise(resolve => setTimeout(resolve, 800));
 
       if (Platform.OS !== 'web') {
@@ -131,11 +129,10 @@ export default function LoginPage() {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     } finally {
-      setLoading(false); // ✅ ensures spinner always stops
+      setLoading(false);
     }
   };
 
-  // ✅ Fixed handleGoogleSignIn with guaranteed loading stop
   const handleGoogleSignIn = async () => {
     setError('');
     setLoading(true);
@@ -145,7 +142,6 @@ export default function LoginPage() {
 
     try {
       await signInWithGoogle();
-      // ⏳ Allow Firebase to complete sign-in before UI resumes
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (Platform.OS !== 'web') {
@@ -227,7 +223,7 @@ export default function LoginPage() {
               end={{ x: 1, y: 1 }}
               style={styles.logoGradient}
             >
-              <Ionicons name="wallet" size={50} color="#fff" />
+              <Icon name="wallet" size={50} color="#fff" />
             </LinearGradient>
           </Animated.View>
 
@@ -261,7 +257,7 @@ export default function LoginPage() {
               colors={['#fff', '#f3f4f6']}
               style={styles.googleGradient}
             >
-              <Ionicons name="logo-google" size={24} color="#EA4335" />
+              <Icon name="logo-google" size={24} color="#EA4335" />
               <Text style={styles.googleText}>
                 {isLogin ? 'Sign in' : 'Sign up'} with Google
               </Text>
@@ -275,7 +271,7 @@ export default function LoginPage() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="mail" size={20} color="#8b5cf6" style={styles.inputIcon} />
+            <Icon name="mail" size={20} color="#8b5cf6" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -290,7 +286,7 @@ export default function LoginPage() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed" size={20} color="#8b5cf6" style={styles.inputIcon} />
+            <Icon name="lock-closed" size={20} color="#8b5cf6" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Password"
@@ -302,13 +298,13 @@ export default function LoginPage() {
               returnKeyType={isLogin ? 'done' : 'next'}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={20} color="#64748b" />
+              <Icon name={showPassword ? 'eye' : 'eye-off'} size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
 
           {!isLogin && (
             <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed" size={20} color="#8b5cf6" style={styles.inputIcon} />
+              <Icon name="lock-closed" size={20} color="#8b5cf6" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Confirm Password"
@@ -324,7 +320,7 @@ export default function LoginPage() {
 
           {error ? (
             <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={16} color="#ef4444" />
+              <Icon name="alert-circle" size={16} color="#ef4444" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -349,7 +345,7 @@ export default function LoginPage() {
                     <Text style={styles.submitText}>
                       {isLogin ? 'Sign In' : 'Create Account'}
                     </Text>
-                    <Ionicons name="arrow-forward" size={20} color="#fff" />
+                    <Icon name="arrow-forward" size={20} color="#fff" />
                   </>
                 )}
               </LinearGradient>

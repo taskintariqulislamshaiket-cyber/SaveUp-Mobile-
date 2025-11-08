@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '../../src/components/Icon';
 import { Platform } from 'react-native';
 
 export default function TabsLayout() {
@@ -28,7 +28,7 @@ export default function TabsLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Icon name="home" size={size} color={color} />
           ),
         }}
       />
@@ -37,7 +37,7 @@ export default function TabsLayout() {
         options={{
           title: 'Expenses',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="receipt" size={size} color={color} />
+            <Icon name="receipt" size={size} color={color} />
           ),
         }}
       />
@@ -46,7 +46,7 @@ export default function TabsLayout() {
         options={{
           title: 'Goals',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trophy" size={size} color={color} />
+            <Icon name="trophy" size={size} color={color} />
           ),
         }}
       />
@@ -55,7 +55,7 @@ export default function TabsLayout() {
         options={{
           title: 'Insights',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bulb" size={size} color={color} />
+            <Icon name="bulb" size={size} color={color} />
           ),
         }}
       />
@@ -64,7 +64,7 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Icon name="person" size={size} color={color} />
           ),
         }}
       />
