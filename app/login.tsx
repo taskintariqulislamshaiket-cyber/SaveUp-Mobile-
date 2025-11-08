@@ -193,7 +193,6 @@ export default function LoginPage() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ✅ EXACT MATCH - Dark navy like your mobile (Image 2) */}
         <LinearGradient
           colors={['#0f172a', '#1e1b4b', '#1e293b']}
           style={StyleSheet.absoluteFillObject}
@@ -309,7 +308,7 @@ export default function LoginPage() {
               <TextInput
                 style={styles.input}
                 placeholder="Confirm Password"
-                placeholderTextColor="#64748b"}
+                placeholderTextColor="#64748b"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showPassword}
