@@ -1,10 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';
 import * as Google from 'expo-auth-session/providers/google';
-import { useRouter } from 'expo-router';
 
 // Firebase (compat)
 import { firebase, db } from '../config/firebase-config';
@@ -23,7 +22,6 @@ export interface UserProfile {
   monthlyIncome?: number;
   remainingBalanceCurrentMonth?: number;
   salaryDay?: number;
-  existingSavings?: number;
   profileComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -57,8 +55,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
-  const router = useRouter();
 
   // Expo Go needs proxy; dev build does not
   const isExpoGo = Constants.appOwnership === 'expo';
@@ -143,7 +139,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setUserProfile(null);
         setLoading(false);
-        setInitialLoad(false);
         return;
       }
 
@@ -162,7 +157,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setLoading(false);
-      setInitialLoad(false);
 
       return () => { if (profileUnsub) profileUnsub(); };
     });
@@ -170,28 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsub;
   }, []);
 
-  const lastRouteRef = useRef<string | null>(null);
-  const navigateSafely = (path: string) => {
-    if (lastRouteRef.current === path) return;
-    lastRouteRef.current = path;
-    try { router.replace(path); }
-    catch {
-      if (Platform.OS === 'web') (window as any).location.assign(path);
-    }
-  };
-
-  const pickNextRoute = (): string => {
-    if (!user) return '/login';
-    if (!userProfile?.personalityType) return '/quiz';
-    if (!userProfile?.profileComplete) return '/profile-setup';
-    return '/(tabs)';
-  };
-
-  useEffect(() => {
-    if (initialLoad || loading) return;
-    const next = pickNextRoute();
-    navigateSafely(next);
-  }, [user, userProfile, loading, initialLoad]);
+  // REMOVED: Auto-navigation useEffect - let index.tsx handle routing
 
   // Handle Google auth result (id_token for Firebase)
   useEffect(() => {
@@ -252,11 +225,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await firebase.auth().signOut();
       setUser(null);
       setUserProfile(null);
-      lastRouteRef.current = null;
-      navigateSafely('/login');
+      
+      // Navigate to root (which shows onboarding for logged-out users)
       if (Platform.OS === 'web') {
         setTimeout(() => {
-          try { (window as any).location.replace('/login'); } catch { (window as any).location.assign('/login'); }
+          try { (window as any).location.replace('/'); } 
+          catch { (window as any).location.assign('/'); }
         }, 0);
       }
     } finally { setLoading(false); }
