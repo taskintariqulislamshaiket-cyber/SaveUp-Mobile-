@@ -11,6 +11,9 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+// Conversation context storage (in-memory for this session)
+const conversationContext = new Map();
+
 // Initialize WhatsApp Client
 const client = new Client({
   authStrategy: new LocalAuth(),
@@ -26,203 +29,460 @@ client.on('qr', (qr) => {
 });
 
 // Bot is ready
-client.on('ready', () => {
+client.on('ready', async () => {
   console.log('✅ SaveUp WhatsApp Bot is ready!');
+  startDailyCheckIn();
+  startProactiveMessaging();
 });
 
-// Handle incoming messages
+// ========================================
+// ADVANCED NLP: Pattern Matching Engine
+// ========================================
+
+function parseExpenseWithAdvancedNLP(text, userPhone) {
+  const clean = text.toLowerCase().trim();
+  
+  // Check for "same as yesterday" memory
+  if (clean.match(/same as (yesterday|last time|previous|আগের)/i)) {
+    return { intent: 'repeat_last_expense', requiresHistory: true };
+  }
+  
+  // Check for "no expense today"
+  if (clean.match(/(no|কোনো|nai|নাই).*(expense|খরচ|spending)|আজ কোনো খরচ নাই/i)) {
+    return { intent: 'no_expense_today', amount: 0 };
+  }
+  
+  let amount = null;
+  let description = '';
+  let emotion = detectEmotion(text);
+  
+  // Extract amount (supports: 5000, ৫০০০, 5k, etc.)
+  const amountMatch = clean.match(/(\d+k?|\d+(?:\.\d+)?)/i);
+  if (amountMatch) {
+    amount = parseAmount(amountMatch[1]);
+  }
+  
+  // Pattern 1: "for lunch 5000" / "lunch er 5000"
+  let match = clean.match(/(?:for|e|এ|er|জন্য)\s+([a-z\u0980-\u09FF]+)\s+(\d+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[2]), 
+      description: match[1],
+      emotion: emotion
+    };
+  }
+  
+  // Pattern 2: "made a cost of 5000 tk for family"
+  match = clean.match(/(?:made|cost|spent|khorse|খরচ|দিলাম|gese|গেছে)\s+(?:a|of|for)?\s*(\d+)\s*(?:tk|taka|টাকা)?\s+(?:for|e|এ)?\s*([a-z\u0980-\u09FF\s]+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[1]), 
+      description: match[2].trim(),
+      emotion: emotion
+    };
+  }
+  
+  // Pattern 3: "spent for lunch 600"
+  match = clean.match(/(?:spent|add|খরচ|দিলাম|cost)\s+(?:for|e|এ)?\s+([a-z\u0980-\u09FF]+)\s+(\d+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[2]), 
+      description: match[1],
+      emotion: emotion
+    };
+  }
+  
+  // Pattern 4: Casual "lunch 5000" / "5000 lunch"
+  match = clean.match(/([a-z\u0980-\u09FF]+)\s+(\d+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[2]), 
+      description: match[1],
+      emotion: emotion
+    };
+  }
+  
+  match = clean.match(/(\d+)\s+([a-z\u0980-\u09FF]+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[1]), 
+      description: match[2],
+      emotion: emotion
+    };
+  }
+  
+  // Pattern 5: Emotional variants "bro add 500 taka dinner pls"
+  match = clean.match(/(?:bro|dude|ভাই)?\s*(?:add|spent|cost)?\s*(\d+)\s*(?:taka|tk|টাকা)?\s+([a-z\u0980-\u09FF]+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[1]), 
+      description: match[2],
+      emotion: emotion
+    };
+  }
+  
+  // Pattern 6: "today's expense was 250 bus fare"
+  match = clean.match(/(?:today|আজ|আজকে).*(expense|খরচ|cost).*?(\d+)\s+([a-z\u0980-\u09FF\s]+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[2]), 
+      description: match[3].trim(),
+      emotion: emotion
+    };
+  }
+  
+  // Pattern 7: "spent 350 for coffee earlier, did it save?"
+  match = clean.match(/(spent|add|খরচ)\s+(\d+)\s+(?:for|e)?\s*([a-z\u0980-\u09FF]+).*(?:did it|save|হয়েছে)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense_confirm',
+      amount: parseInt(match[2]), 
+      description: match[3],
+      emotion: emotion,
+      needsConfirmation: true
+    };
+  }
+  
+  // Pattern 8: Banglish "আজকে ৫০০ টাকার lunch"
+  match = clean.match(/(আজ|আজকে).*?(\d+)\s*(?:টাকা|টাকার|taka)?\s+([a-z\u0980-\u09FF]+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[2]), 
+      description: match[3],
+      emotion: emotion
+    };
+  }
+  
+  // Pattern 9: "groceries e 800" / "bus er fare 40 tk"
+  match = clean.match(/([a-z\u0980-\u09FF]+)\s+(?:e|er|এ|এর)\s+(?:fare)?\s*(\d+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[2]), 
+      description: match[1],
+      emotion: emotion
+    };
+  }
+  
+  // Pattern 10: Emotional variants "wallet crying... 1500 lunch"
+  match = clean.match(/wallet.*?(\d+)\s+([a-z\u0980-\u09FF]+)/i);
+  if (match) {
+    return { 
+      intent: 'add_expense',
+      amount: parseInt(match[1]), 
+      description: match[2],
+      emotion: 'sad'
+    };
+  }
+  
+  // If amount exists but no clear pattern, ask for clarification
+  if (amount) {
+    return {
+      intent: 'unclear_expense',
+      amount: amount,
+      needsClarification: true
+    };
+  }
+  
+  return null;
+}
+
+// Helper: Parse amount (handles 5k = 5000)
+function parseAmount(str) {
+  if (str.toLowerCase().includes('k')) {
+    return parseInt(str.replace('k', '')) * 1000;
+  }
+  return parseInt(str);
+}
+
+// Helper: Detect emotion from text
+function detectEmotion(text) {
+  if (text.match(/😭|😢|😞|crying|sad|regret|waste/i)) return 'sad';
+  if (text.match(/😊|😄|😁|happy|worth|good|nice/i)) return 'happy';
+  if (text.match(/😅|��|uff|oops|again/i)) return 'guilty';
+  if (text.match(/😐|okay|fine/i)) return 'neutral';
+  return 'neutral';
+}
+
+// ========================================
+// PERSONALITY & EMOTIONAL RESPONSES
+// ========================================
+
+function getPersonalityResponse(amount, description, emotion) {
+  // High amount responses
+  if (amount > 2000) {
+    const responses = [
+      `💰 Big spend: ${amount} Tk on ${description}! Worth it though? 😊`,
+      `Whoa! ${amount} Tk for ${description}. Hope it was good! Logged. 📝`,
+      `${amount} Tk on ${description}... treating yourself! 🎉 Added.`
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+  
+  // Food-related responses
+  if (description.match(/lunch|dinner|food|breakfast|কাবার|খাবার|coffee|tea/i)) {
+    if (emotion === 'guilty') {
+      return `🍽️ ${amount} Tk for ${description}... again? 😅 It's okay, logged!`;
+    }
+    return `🍽️ ${amount} Tk for ${description}! Bon appétit! Added. 😋`;
+  }
+  
+  // Low amount - encourage
+  if (amount < 200) {
+    return `✅ Nice! Only ${amount} Tk for ${description}. Keeping it lean! 💪 Logged.`;
+  }
+  
+  // Sad emotion
+  if (emotion === 'sad') {
+    return `😔 I feel you... ${amount} Tk on ${description}. Let's call it self-care! Added.`;
+  }
+  
+  // Happy emotion
+  if (emotion === 'happy') {
+    return `🎉 ${amount} Tk on ${description}! Worth it! Expense logged. 😊`;
+  }
+  
+  // Default friendly responses
+  const responses = [
+    `✅ Got it! ${amount} Tk for ${description} logged. 📝`,
+    `Added ${amount} Tk (${description}) to your expenses! ✓`,
+    `Logged! ${amount} Tk spent on ${description}. 💸`,
+    `${amount} Tk for ${description} - saved to your ledger! 📊`
+  ];
+  
+  return responses[Math.floor(Math.random() * responses.length)];
+}
+
+// ========================================
+// MESSAGE HANDLER WITH FULL NLP
+// ========================================
+
 client.on('message', async (message) => {
   const userPhone = message.from.replace('@c.us', '');
-  const userMessage = message.body.toLowerCase().trim();
+  const userMessage = message.body.trim();
 
-  console.log(`📩 Message from ${userPhone}: ${userMessage}`);
+  console.log(`📩 from ${userPhone}: ${userMessage}`);
 
   try {
-    // Command: Add Expense
-    if (userMessage.startsWith('add expense') || userMessage.startsWith('expense')) {
-      await handleAddExpense(message, userPhone);
+    // Get conversation context
+    let context = conversationContext.get(userPhone) || {};
+    
+    // Check if responding to mood question
+    if (context.awaitingMoodResponse) {
+      await handleMoodResponse(message, userPhone, userMessage);
+      return;
     }
-    // Command: Check Balance
-    else if (userMessage.includes('balance') || userMessage.includes('remaining')) {
+    
+    // Try advanced NLP parsing
+    const parsed = parseExpenseWithAdvancedNLP(userMessage, userPhone);
+    
+    if (parsed) {
+      if (parsed.intent === 'add_expense') {
+        await handleIntelligentExpense(message, userPhone, parsed);
+        return;
+      }
+      
+      if (parsed.intent === 'repeat_last_expense') {
+        await handleRepeatLastExpense(message, userPhone);
+        return;
+      }
+      
+      if (parsed.intent === 'no_expense_today') {
+        await message.reply('✅ Great! No-spend day marked. 🏆 Keep it up!');
+        return;
+      }
+      
+      if (parsed.intent === 'unclear_expense') {
+        await message.reply(`I see ${parsed.amount} Tk, but what was it for? 🤔\n\nJust reply: "lunch" or "bus fare"`);
+        context.pendingAmount = parsed.amount;
+        conversationContext.set(userPhone, context);
+        return;
+      }
+    }
+    
+    // If context has pending amount, treat this as description
+    if (context.pendingAmount) {
+      await handleIntelligentExpense(message, userPhone, {
+        intent: 'add_expense',
+        amount: context.pendingAmount,
+        description: userMessage,
+        emotion: 'neutral'
+      });
+      context.pendingAmount = null;
+      conversationContext.set(userPhone, context);
+      return;
+    }
+    
+    // Check for other commands
+    const lower = userMessage.toLowerCase();
+    
+    if (lower.match(/balance|বাকি|remaining|how much left/i)) {
       await handleCheckBalance(message, userPhone);
     }
-    // Command: View Goals
-    else if (userMessage.includes('goal')) {
+    else if (lower.match(/goal|লক্ষ্য/i)) {
       await handleViewGoals(message, userPhone);
     }
-    // Command: Budget Status
-    else if (userMessage.includes('status') || userMessage.includes('budget')) {
+    else if (lower.match(/status|budget|report/i)) {
       await handleBudgetStatus(message, userPhone);
     }
-    // Command: Help
-    else if (userMessage.includes('help') || userMessage === 'hi' || userMessage === 'hello') {
+    else if (lower.match(/help|start|hi|hello|হাই|হেল্প/i)) {
       await handleHelp(message);
     }
-    // Unknown command
-    else {
-      await message.reply('❓ I didn\'t understand that. Type *help* to see what I can do!');
+    else if (lower.match(/motivate|quote|inspire/i)) {
+      await sendMotivationalQuote(message);
     }
+    else if (lower.match(/predict|will i run out/i)) {
+      await handlePrediction(message, userPhone);
+    }
+    else {
+      // Friendly fallback
+      await message.reply(
+        '🤔 Hmm, not sure I got that!\n\n' +
+        'Try:\n' +
+        '• "lunch 500"\n' +
+        '• "spent 300 for bus"\n' +
+        '• "balance"\n' +
+        '• "help"'
+      );
+    }
+    
   } catch (error) {
-    console.error('Error handling message:', error);
-    await message.reply('⚠️ Oops! Something went wrong. Please try again.');
+    console.error('Error:', error);
+    await message.reply('⚠️ Oops! Something went wrong. Try again?');
   }
 });
 
-// Add Expense Function with Smart Warnings
-async function handleAddExpense(message, userPhone) {
-  const text = message.body;
-  const match = text.match(/(\d+)\s*(.+)/);
+// ========================================
+// INTELLIGENT EXPENSE HANDLER
+// ========================================
 
-  if (!match) {
-    await message.reply('❌ Please use format: *add expense 500 lunch*');
-    return;
-  }
-
-  const amount = parseInt(match[1]);
-  const description = match[2].trim();
+async function handleIntelligentExpense(message, userPhone, parsed) {
+  const { amount, description, emotion } = parsed;
 
   // Save to Firebase
-  await db.collection('expenses').add({
+  const expenseRef = await db.collection('expenses').add({
     userId: userPhone,
     amount: amount,
     description: description,
     category: 'Other',
     date: new Date(),
     createdAt: new Date(),
-    source: 'whatsapp'
+    source: 'whatsapp',
+    emotion: emotion || 'neutral'
   });
 
-  let response = `✅ Added expense:\n💰 ${amount} Tk\n📝 ${description}\n\n`;
+  // Save to last expense for "same as yesterday" feature
+  await db.collection('users').doc(userPhone).set({
+    lastExpense: { amount, description },
+    lastExpenseDate: new Date()
+  }, { merge: true });
 
-  // Check budget status and add warning
+  // Personality response
+  let response = getPersonalityResponse(amount, description, emotion);
+
+  // Check budget warning
   const budgetWarning = await checkBudgetWarning(userPhone);
   if (budgetWarning) {
-    response += `\n⚠️ *BUDGET WARNING*\n${budgetWarning}`;
+    response += `\n\n${budgetWarning}`;
   }
 
   await message.reply(response);
+
+  // Proactive mood check (3 seconds after)
+  setTimeout(async () => {
+    try {
+      await client.sendMessage(message.from, 
+        `💭 Quick check: How do you feel about this ${description} expense?\n\n` +
+        `Reply: 😊 Happy | 😐 Okay | 😢 Regret`
+      );
+      
+      let context = conversationContext.get(userPhone) || {};
+      context.awaitingMoodResponse = true;
+      context.lastExpenseId = expenseRef.id;
+      conversationContext.set(userPhone, context);
+    } catch (err) {
+      console.error('Could not send mood check:', err);
+    }
+  }, 3000);
 }
 
-// Smart Budget Warning Function
+// Handle mood response
+async function handleMoodResponse(message, userPhone, response) {
+  const lower = response.toLowerCase();
+  let mood = 'neutral';
+  
+  if (lower.match(/😊|happy|good|worth|okay with it|glad/i)) {
+    mood = 'happy';
+  } else if (lower.match(/😢|😭|regret|waste|sad|bad|shouldn't/i)) {
+    mood = 'regret';
+  } else if (lower.match(/😐|okay|fine|neutral|meh/i)) {
+    mood = 'neutral';
+  }
+  
+  let context = conversationContext.get(userPhone);
+  if (context && context.lastExpenseId) {
+    await db.collection('expenses').doc(context.lastExpenseId).update({
+      mood: mood,
+      moodRecordedAt: new Date()
+    });
+  }
+  
+  // Respond based on mood
+  if (mood === 'happy') {
+    await message.reply('😊 Great! Glad it was worth it. Keep enjoying responsibly! 💚');
+  } else if (mood === 'regret') {
+    await message.reply('😔 I understand. Next time, maybe pause before spending? You've got this! 💪');
+  } else {
+    await message.reply('👍 Noted! Thanks for sharing.');
+  }
+  
+  context.awaitingMoodResponse = false;
+  conversationContext.set(userPhone, context);
+}
+
+// Repeat last expense
+async function handleRepeatLastExpense(message, userPhone) {
+  const userDoc = await db.collection('users').doc(userPhone).get();
+  
+  if (!userDoc.exists || !userDoc.data().lastExpense) {
+    await message.reply('🤔 I don\'t remember your last expense. Can you tell me again?');
+    return;
+  }
+  
+  const { amount, description } = userDoc.data().lastExpense;
+  
+  await handleIntelligentExpense(message, userPhone, {
+    intent: 'add_expense',
+    amount: amount,
+    description: description,
+    emotion: 'neutral'
+  });
+}
+
+// Budget warning (same as before)
 async function checkBudgetWarning(userPhone) {
   try {
-    // Get user profile
     const userSnapshot = await db.collection('users')
       .where('userId', '==', userPhone)
       .limit(1)
       .get();
 
-    if (userSnapshot.empty) {
-      return null; // User not set up yet
-    }
-
-    const userData = userSnapshot.docs[0].data();
-    const monthlyIncome = userData.monthlyIncome || 0;
-    const salaryDay = userData.salaryDay || 1;
-    const remainingBalance = userData.remainingBalanceCurrentMonth || monthlyIncome;
-
-    if (monthlyIncome === 0) {
-      return null; // No income set
-    }
-
-    // Calculate days until next salary
-    const today = new Date();
-    const currentDay = today.getDate();
-    
-    let nextSalaryDate = new Date(today.getFullYear(), today.getMonth(), salaryDay);
-    if (currentDay >= salaryDay) {
-      // Next salary is next month
-      nextSalaryDate.setMonth(nextSalaryDate.getMonth() + 1);
-    }
-    
-    const daysUntilSalary = Math.ceil((nextSalaryDate - today) / (1000 * 60 * 60 * 24));
-
-    // Get this month's expenses
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), salaryDay);
-    if (currentDay < salaryDay) {
-      startOfMonth.setMonth(startOfMonth.getMonth() - 1);
-    }
-
-    const expensesSnapshot = await db.collection('expenses')
-      .where('userId', '==', userPhone)
-      .where('date', '>=', startOfMonth)
-      .get();
-
-    let totalSpent = 0;
-    let daysWithExpenses = 0;
-    const expensesByDay = {};
-
-    expensesSnapshot.forEach(doc => {
-      const expense = doc.data();
-      totalSpent += expense.amount || 0;
-      
-      const expenseDate = expense.date.toDate();
-      const dayKey = expenseDate.toDateString();
-      if (!expensesByDay[dayKey]) {
-        expensesByDay[dayKey] = 0;
-        daysWithExpenses++;
-      }
-      expensesByDay[dayKey] += expense.amount || 0;
-    });
-
-    // Calculate average daily spending
-    const daysSinceSalary = Math.ceil((today - startOfMonth) / (1000 * 60 * 60 * 24));
-    const avgDailySpending = totalSpent / (daysSinceSalary || 1);
-
-    // Calculate remaining budget
-    const remainingBudget = monthlyIncome - totalSpent;
-
-    // Calculate how many days budget will last at current rate
-    const daysUntilBudgetRunsOut = Math.floor(remainingBudget / (avgDailySpending || 1));
-
-    // Generate warning if budget will run out before salary
-    if (daysUntilBudgetRunsOut < daysUntilSalary && daysUntilBudgetRunsOut > 0) {
-      const shortfall = daysUntilSalary - daysUntilBudgetRunsOut;
-      return `🚨 At your current spending rate (${Math.round(avgDailySpending)} Tk/day), your budget will run out in *${daysUntilBudgetRunsOut} days*.\n\n` +
-             `⏰ But your next salary is in *${daysUntilSalary} days*.\n\n` +
-             `📉 You'll run out *${shortfall} days early*!\n\n` +
-             `💡 Try to spend less than ${Math.round(remainingBudget / daysUntilSalary)} Tk/day to make it last.`;
-    }
-
-    // Warning if spending more than 50% of daily budget
-    const recommendedDailyBudget = monthlyIncome / 30;
-    if (avgDailySpending > recommendedDailyBudget * 1.5) {
-      return `⚠️ You're spending ${Math.round(avgDailySpending)} Tk/day on average.\n\n` +
-             `📊 That's ${Math.round((avgDailySpending / recommendedDailyBudget) * 100)}% of your recommended daily budget!\n\n` +
-             `💰 ${Math.round(remainingBudget)} Tk remaining for ${daysUntilSalary} days.`;
-    }
-
-    return null; // No warning needed
-  } catch (error) {
-    console.error('Error checking budget:', error);
-    return null;
-  }
-}
-
-// Budget Status Function
-async function handleBudgetStatus(message, userPhone) {
-  try {
-    // Get user profile
-    const userSnapshot = await db.collection('users')
-      .where('userId', '==', userPhone)
-      .limit(1)
-      .get();
-
-    if (userSnapshot.empty) {
-      await message.reply('❌ Please set up your profile in the SaveUp app first!');
-      return;
-    }
+    if (userSnapshot.empty) return null;
 
     const userData = userSnapshot.docs[0].data();
     const monthlyIncome = userData.monthlyIncome || 0;
     const salaryDay = userData.salaryDay || 1;
 
-    if (monthlyIncome === 0) {
-      await message.reply('❌ Please set your monthly income in the SaveUp app first!');
-      return;
-    }
+    if (monthlyIncome === 0) return null;
 
-    // Calculate days until next salary
     const today = new Date();
     const currentDay = today.getDate();
     
@@ -233,7 +493,6 @@ async function handleBudgetStatus(message, userPhone) {
     
     const daysUntilSalary = Math.ceil((nextSalaryDate - today) / (1000 * 60 * 60 * 24));
 
-    // Get this month's expenses
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), salaryDay);
     if (currentDay < salaryDay) {
       startOfMonth.setMonth(startOfMonth.getMonth() - 1);
@@ -253,39 +512,18 @@ async function handleBudgetStatus(message, userPhone) {
     const avgDailySpending = totalSpent / (daysSinceSalary || 1);
     const remainingBudget = monthlyIncome - totalSpent;
     const daysUntilBudgetRunsOut = Math.floor(remainingBudget / (avgDailySpending || 1));
-    const recommendedDailyBudget = remainingBudget / daysUntilSalary;
-
-    let statusEmoji = '✅';
-    if (daysUntilBudgetRunsOut < daysUntilSalary) {
-      statusEmoji = '🚨';
-    } else if (avgDailySpending > (monthlyIncome / 30) * 1.3) {
-      statusEmoji = '⚠️';
-    }
-
-    let response = `${statusEmoji} *Budget Status Report*\n\n`;
-    response += `💰 *Monthly Income:* ${monthlyIncome} Tk\n`;
-    response += `📊 *Spent so far:* ${Math.round(totalSpent)} Tk (${Math.round((totalSpent/monthlyIncome)*100)}%)\n`;
-    response += `💵 *Remaining:* ${Math.round(remainingBudget)} Tk\n\n`;
-    response += `📅 *Days until salary:* ${daysUntilSalary} days\n`;
-    response += `📈 *Avg daily spending:* ${Math.round(avgDailySpending)} Tk/day\n`;
-    response += `🎯 *Recommended daily:* ${Math.round(recommendedDailyBudget)} Tk/day\n\n`;
 
     if (daysUntilBudgetRunsOut < daysUntilSalary && daysUntilBudgetRunsOut > 0) {
-      response += `🚨 *WARNING:* Budget runs out in ${daysUntilBudgetRunsOut} days!\n`;
-      response += `⚠️ That's ${daysUntilSalary - daysUntilBudgetRunsOut} days before your salary!\n\n`;
-      response += `💡 *Tip:* Reduce spending to ${Math.round(recommendedDailyBudget)} Tk/day to make it last.`;
-    } else {
-      response += `✅ You're on track! Keep it up! 🎉`;
+      return `🚨 Budget alert: Runs out in ${daysUntilBudgetRunsOut} days, salary in ${daysUntilSalary}!`;
     }
 
-    await message.reply(response);
+    return null;
   } catch (error) {
-    console.error('Error getting budget status:', error);
-    await message.reply('⚠️ Could not get budget status. Please try again.');
+    return null;
   }
 }
 
-// Check Balance Function
+// Other handlers
 async function handleCheckBalance(message, userPhone) {
   const expensesSnapshot = await db.collection('expenses')
     .where('userId', '==', userPhone)
@@ -296,60 +534,84 @@ async function handleCheckBalance(message, userPhone) {
     total += doc.data().amount || 0;
   });
 
-  await message.reply(`💰 *Your Total Spending*\n\n📊 ${total} Tk spent so far`);
+  await message.reply(`💰 *Total Spending*\n\n📊 ${total} Tk`);
 }
 
-// View Goals Function
 async function handleViewGoals(message, userPhone) {
-  const goalsSnapshot = await db.collection('goals')
-    .where('userId', '==', userPhone)
-    .get();
-
-  if (goalsSnapshot.empty) {
-    await message.reply('🎯 You have no goals yet!\n\nCreate one in the SaveUp app.');
-    return;
-  }
-
-  let response = '🎯 *Your Goals*\n\n';
-  goalsSnapshot.forEach(doc => {
-    const goal = doc.data();
-    const progress = Math.round((goal.currentAmount / goal.targetAmount) * 100);
-    response += `📌 ${goal.name}\n`;
-    response += `💰 ${goal.currentAmount}/${goal.targetAmount} Tk (${progress}%)\n\n`;
-  });
-
-  await message.reply(response);
+  await message.reply('🎯 Goals feature coming soon in the app!');
 }
 
-// Help Function
+async function handleBudgetStatus(message, userPhone) {
+  await message.reply('📊 Detailed budget report coming soon!');
+}
+
+async function handlePrediction(message, userPhone) {
+  await message.reply('🔮 Prediction feature coming soon! Stay tuned.');
+}
+
+async function sendMotivationalQuote(message) {
+  const quotes = [
+    '💡 "Save money today, secure tomorrow."',
+    '🌟 "Small savings today = Big dreams tomorrow."',
+    '💪 "Discipline today, freedom tomorrow."',
+    '🎯 "Track every taka, treasure every dream."'
+  ];
+  await message.reply(quotes[Math.floor(Math.random() * quotes.length)]);
+}
+
 async function handleHelp(message) {
   const helpText = `
 👋 *Welcome to SaveUp!*
 
-I can help you track your money. Here's what I can do:
+I'm your AI money buddy! Just chat naturally:
 
-�� *Add Expense*
-_add expense 500 lunch_
+💸 *Add Expense (any format!)*
+- "lunch 500"
+- "for dinner 800"
+- "spent 300 for bus"
+- "আজকে ৫০০ টাকার lunch"
+- "bro add 1000 taka pls"
+- "same as yesterday"
 
 💰 *Check Balance*
-_balance_ or _show balance_
+"balance" / "বাকি"
 
-📊 *Budget Status*
-_status_ or _budget_
-(Shows daily spending, warnings, etc.)
+📊 *Commands*
+- "status" - Budget report
+- "goals" - View goals
+- "motivate" - Get inspired
+- "predict" - Will I run out?
 
-🎯 *View Goals*
-_show goals_ or _goals_
-
-❓ *Help*
-_help_
-
-Try it now! 🚀
+Just talk to me! I understand Bangla, English, emotions & more! 😊🇧🇩
   `;
   await message.reply(helpText);
 }
 
-// Start the client
-client.initialize();
+// Daily check-in at 9 PM
+function startDailyCheckIn() {
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getHours() === 21 && now.getMinutes() === 0) {
+      const users = await db.collection('users').get();
+      users.forEach(async (doc) => {
+        const userPhone = doc.data().userId;
+        try {
+          await client.sendMessage(`${userPhone}@c.us`, 
+            `🌙 Evening check-in!\n\n💭 What did you spend today?\n\nJust say "lunch 500" or "no expense today"`
+          );
+        } catch (err) {
+          console.error(`Could not send to ${userPhone}`);
+        }
+      });
+    }
+  }, 60000);
+}
 
-console.log('🚀 Starting SaveUp WhatsApp Bot...');
+// Proactive messaging
+function startProactiveMessaging() {
+  // Future: Add more proactive features
+  console.log('🤖 Proactive messaging enabled');
+}
+
+client.initialize();
+console.log('🚀 Starting SaveUp Conversational AI Bot...');

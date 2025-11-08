@@ -1,15 +1,55 @@
-import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const ONBOARDING_COMPLETED_KEY = '@saveup_onboarding_completed';
 
 export default function Index() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    checkOnboardingStatus();
+  }, []);
+
+  const checkOnboardingStatus = async () => {
+    try {
+      // Check URL parameter for force-onboarding (works in incognito)
+      const forceOnboarding = searchParams.get('onboarding');
+      
+      if (forceOnboarding === 'true') {
+        console.log('→ Force showing onboarding via URL parameter');
+        router.replace('/onboarding');
+        return;
+      }
+
+      const hasCompletedOnboarding = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
+      
+      if (!hasCompletedOnboarding) {
+        console.log('→ First time user, showing onboarding');
+        router.replace('/onboarding');
+        return;
+      }
+      
+      console.log('→ Onboarding already completed, proceeding to auth check');
+      setOnboardingComplete(true);
+      setCheckingOnboarding(false);
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      setOnboardingComplete(true);
+      setCheckingOnboarding(false);
+    }
+  };
+
+  useEffect(() => {
+    // Wait for BOTH onboarding check AND auth to complete
+    if (loading || checkingOnboarding || !onboardingComplete) return;
 
     console.log('Index navigation check:', { 
       user: !!user, 
@@ -17,7 +57,6 @@ export default function Index() {
       isComplete: userProfile?.profileComplete 
     });
 
-    // Add a small delay to ensure auth state is fully loaded
     const timer = setTimeout(() => {
       if (!user) {
         console.log('→ Redirecting to login');
@@ -35,7 +74,7 @@ export default function Index() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [user, userProfile, loading, router]);
+  }, [user, userProfile, loading, checkingOnboarding, onboardingComplete, router]);
 
   return (
     <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>

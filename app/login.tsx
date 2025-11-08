@@ -12,7 +12,7 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import Icon from '../src/components/Icon';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../src/contexts/AuthContext';
@@ -223,7 +223,7 @@ export default function LoginPage() {
               end={{ x: 1, y: 1 }}
               style={styles.logoGradient}
             >
-              <Icon name="wallet" size={50} color="#fff" />
+              <Ionicons name="wallet" size={50} color="#fff" />
             </LinearGradient>
           </Animated.View>
 
@@ -257,7 +257,7 @@ export default function LoginPage() {
               colors={['#fff', '#f3f4f6']}
               style={styles.googleGradient}
             >
-              <Icon name="logo-google" size={24} color="#EA4335" />
+              <Ionicons name="logo-google" size={24} color="#EA4335" />
               <Text style={styles.googleText}>
                 {isLogin ? 'Sign in' : 'Sign up'} with Google
               </Text>
@@ -271,7 +271,7 @@ export default function LoginPage() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Icon name="mail" size={20} color="#8b5cf6" style={styles.inputIcon} />
+            <Ionicons name="mail" size={20} color="#8b5cf6" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -286,7 +286,7 @@ export default function LoginPage() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Icon name="lock-closed" size={20} color="#8b5cf6" style={styles.inputIcon} />
+            <Ionicons name="lock-closed" size={20} color="#8b5cf6" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Password"
@@ -298,13 +298,13 @@ export default function LoginPage() {
               returnKeyType={isLogin ? 'done' : 'next'}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Icon name={showPassword ? 'eye' : 'eye-off'} size={20} color="#64748b" />
+              <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
 
           {!isLogin && (
             <View style={styles.inputContainer}>
-              <Icon name="lock-closed" size={20} color="#8b5cf6" style={styles.inputIcon} />
+              <Ionicons name="lock-closed" size={20} color="#8b5cf6" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Confirm Password"
@@ -320,7 +320,7 @@ export default function LoginPage() {
 
           {error ? (
             <View style={styles.errorContainer}>
-              <Icon name="alert-circle" size={16} color="#ef4444" />
+              <Ionicons name="alert-circle" size={16} color="#ef4444" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -345,7 +345,7 @@ export default function LoginPage() {
                     <Text style={styles.submitText}>
                       {isLogin ? 'Sign In' : 'Create Account'}
                     </Text>
-                    <Icon name="arrow-forward" size={20} color="#fff" />
+                    <Ionicons name="arrow-forward" size={20} color="#fff" />
                   </>
                 )}
               </LinearGradient>
