@@ -13,16 +13,25 @@ export default function Index() {
   const params = useLocalSearchParams();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Wait for router to mount
+  useEffect(() => {
+    const timer = setTimeout(() => setIsMounted(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
+    if (!isMounted) return;
     checkOnboardingStatus();
-  }, []);
+  }, [isMounted]);
 
   const checkOnboardingStatus = async () => {
     try {
       // Check URL parameter for force-onboarding (works in incognito)
       if (params.onboarding === 'true') {
         console.log('→ Force showing onboarding via URL parameter');
+        await new Promise(resolve => setTimeout(resolve, 200));
         router.replace('/onboarding');
         return;
       }
@@ -31,6 +40,7 @@ export default function Index() {
       
       if (!hasCompletedOnboarding) {
         console.log('→ First time user, showing onboarding');
+        await new Promise(resolve => setTimeout(resolve, 200));
         router.replace('/onboarding');
         return;
       }
@@ -46,8 +56,7 @@ export default function Index() {
   };
 
   useEffect(() => {
-    // Wait for BOTH onboarding check AND auth to complete
-    if (loading || checkingOnboarding || !onboardingComplete) return;
+    if (loading || checkingOnboarding || !onboardingComplete || !isMounted) return;
 
     console.log('Index navigation check:', { 
       user: !!user, 
@@ -72,7 +81,7 @@ export default function Index() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [user, userProfile, loading, checkingOnboarding, onboardingComplete, router]);
+  }, [user, userProfile, loading, checkingOnboarding, onboardingComplete, isMounted, router]);
 
   return (
     <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
