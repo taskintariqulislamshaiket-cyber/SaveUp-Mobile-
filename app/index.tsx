@@ -48,7 +48,7 @@ const slides = [
   },
   {
     id: 5,
-    title: 'Dream. Plan. Achieve. 🎯',
+    title: 'Dream. Plan. Achieve. ��',
     subtitle: 'New phone? Vacation?',
     description: 'Set goals and track progress.',
     emoji: '🏆',
@@ -68,18 +68,26 @@ export default function Index() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showOnboarding, setShowOnboarding] = useState(true);
 
   useEffect(() => {
-    // If user is already logged in, skip onboarding
+    // If user is already logged in, route based on profile completion
     if (!loading && user) {
       console.log('✅ User logged in, checking profile...');
       
-      if (!userProfile?.personalityType) {
-        router.replace('/quiz');
-      } else if (!userProfile?.profileComplete) {
+      // ✅ CORRECT ORDER: Profile Setup → Quiz → Dashboard
+      // 1. Check if profile setup is complete (has income data)
+      if (!userProfile?.monthlyIncome) {
+        console.log('→ No income data, going to profile-setup');
         router.replace('/profile-setup');
-      } else {
+      }
+      // 2. Then check if personality quiz is complete
+      else if (!userProfile?.personalityType) {
+        console.log('→ No personality type, going to quiz');
+        router.replace('/quiz');
+      }
+      // 3. Finally, go to dashboard if everything is complete
+      else {
+        console.log('→ Profile complete, going to dashboard');
         router.replace('/(tabs)');
       }
     }
@@ -103,7 +111,7 @@ export default function Index() {
   if (loading) {
     return (
       <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
-        <ActivityIndicator size="large" color="#8b5cf6" />
+        <ActivityIndicator size="large" color="#00D4A1" />
       </LinearGradient>
     );
   }
@@ -113,7 +121,7 @@ export default function Index() {
   if (user) {
     return (
       <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
-        <ActivityIndicator size="large" color="#8b5cf6" />
+        <ActivityIndicator size="large" color="#00D4A1" />
       </LinearGradient>
     );
   }
