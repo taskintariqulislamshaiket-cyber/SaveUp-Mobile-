@@ -70,24 +70,22 @@ export default function Index() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    // If user is already logged in, route based on profile completion
     if (!loading && user) {
-      console.log('✅ User logged in, checking profile...');
+      console.log('✅ User logged in, checking profile...', userProfile);
       
-      // ✅ CORRECT ORDER: Profile Setup → Quiz → Dashboard
-      // 1. Check if profile setup is complete (has income data)
-      if (!userProfile?.monthlyIncome) {
-        console.log('→ No income data, going to profile-setup');
+      // ✅ FIX: Check profileComplete field (what profile-setup actually sets)
+      if (!userProfile?.profileComplete) {
+        console.log('→ Profile incomplete, going to profile-setup');
         router.replace('/profile-setup');
       }
-      // 2. Then check if personality quiz is complete
+      // Then check personality quiz
       else if (!userProfile?.personalityType) {
         console.log('→ No personality type, going to quiz');
         router.replace('/quiz');
       }
-      // 3. Finally, go to dashboard if everything is complete
+      // Finally go to dashboard
       else {
-        console.log('→ Profile complete, going to dashboard');
+        console.log('→ Everything complete, going to dashboard');
         router.replace('/(tabs)');
       }
     }
@@ -107,7 +105,6 @@ export default function Index() {
     router.push('/login');
   };
 
-  // Show loading while checking auth
   if (loading) {
     return (
       <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
@@ -116,8 +113,6 @@ export default function Index() {
     );
   }
 
-  // If user exists, this will be handled by useEffect
-  // Otherwise, show onboarding
   if (user) {
     return (
       <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
