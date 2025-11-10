@@ -19,7 +19,6 @@ import { db } from '../../src/config/firebase-config';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
-// ✅ Smart Insights imports
 import { calculateInsights } from '../../src/utils/insightsCalculator';
 import WeeklyInsightsCard from '../../src/components/WeeklyInsightsCard';
 import DailySpendingChart from '../../src/components/DailySpendingChart';
@@ -28,7 +27,7 @@ import CategoryPieChart from '../../src/components/CategoryPieChart';
 const PERSONALITY_TYPES = {
   starter: {
     title: "The Starter",
-    emoji: "��",
+    emoji: "🌱",
     description: "Every journey begins with a single step. Set up your income to unlock insights!",
     tip: "Complete your profile to see your money personality!",
     gradient: ['#10b981', '#34d399'],
@@ -81,6 +80,7 @@ export default function Dashboard() {
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  const logoRotate = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadData();
@@ -97,7 +97,20 @@ export default function Dashboard() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    Animated.loop(
+      Animated.timing(logoRotate, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      })
+    ).start();
   }, [user]);
+
+  const logoSpin = logoRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   const loadData = async () => {
     if (!user) return;
@@ -166,7 +179,6 @@ export default function Dashboard() {
   const spentPercentage = monthlyIncome > 0 ? (thisMonthExpenses / monthlyIncome) * 100 : 0;
   const moneyHealth = Math.max(0, Math.round((moneyLeft / monthlyIncome) * 100));
 
-  // ✅ Smart Insights data
   const insights = calculateInsights(expenses);
 
   const getDaysUntilSalary = () => {
@@ -216,9 +228,11 @@ export default function Dashboard() {
         {/* SaveUp Logo Header */}
         <Animated.View style={[styles.logoHeader, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.logoContainer}>
-            <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.logoCircle}>
-              <Text style={styles.logoEmoji}>💰</Text>
-            </LinearGradient>
+            <Animated.View style={{ transform: [{ rotate: logoSpin }] }}>
+              <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.logoCircle}>
+                <Text style={styles.logoEmoji}>💰</Text>
+              </LinearGradient>
+            </Animated.View>
             <View>
               <Text style={[styles.logoText, { color: colors.text }]}>SaveUp</Text>
               <Text style={[styles.logoSubtext, { color: colors.textSecondary }]}>Bangladesh's smartest money tracker</Text>
@@ -238,13 +252,6 @@ export default function Dashboard() {
             </View>
           </LinearGradient>
         </Animated.View>
-
-        {/* Tagline Banner */}
-        <View style={styles.taglineBanner}>
-          <Text style={styles.taglineMain}>Track automatically via SMS</Text>
-          <Text style={styles.taglineSub}>Get insights, save 10-30% more</Text>
-          <Text style={styles.taglineDetail}>Your finances. On autopilot • Money that actually makes sense</Text>
-        </View>
 
         {/* Big Stats */}
         <View style={styles.statsGrid}>
@@ -297,14 +304,14 @@ export default function Dashboard() {
           <Text style={styles.paydaySubtitle}>Save smart, live fully ✨</Text>
         </LinearGradient>
 
-        {/* 🔥 Smart Insights Section */}
+        {/* Smart Insights Section */}
         <WeeklyInsightsCard insights={insights} />
         <DailySpendingChart data={insights.dailyData} />
         <CategoryPieChart data={insights.byCategory} />
 
         {/* Safety Net */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>��️ Your Safety Net</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>🛡️ Your Safety Net</Text>
           <View style={styles.safetyGrid}>
             <View style={[styles.safetyCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
               <Text style={[styles.safetyLabel, { color: colors.textSecondary }]}>Cash Ready</Text>
@@ -338,7 +345,7 @@ export default function Dashboard() {
               return (
                 <View key={goal.id} style={[styles.goalCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
                   <View style={styles.goalHeader}>
-                    <Text style={[styles.goalName, { color: colors.text }]}>{ goal.name}</Text>
+                    <Text style={[styles.goalName, { color: colors.text }]}>{goal.name}</Text>
                     <Text style={styles.goalProgress}>{Math.round(progress)}%</Text>
                   </View>
                   <View style={[styles.goalProgressBar, { backgroundColor: colors.border }]}>
@@ -414,10 +421,6 @@ const styles = StyleSheet.create({
   personalityDesc: { fontSize: 14, color: '#fff', textAlign: 'center', marginBottom: 16, opacity: 0.95 },
   personalityTip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', padding: 12, borderRadius: 12, gap: 8 },
   personalityTipText: { fontSize: 13, color: '#fff', fontWeight: '600' },
-  taglineBanner: { backgroundColor: '#f59e0b', marginHorizontal: 20, marginBottom: 20, padding: 20, borderRadius: 16, alignItems: 'center' },
-  taglineMain: { fontSize: 18, fontWeight: 'bold', color: '#78350f', marginBottom: 4 },
-  taglineSub: { fontSize: 14, color: '#78350f', marginBottom: 8 },
-  taglineDetail: { fontSize: 11, color: '#78350f', textAlign: 'center', opacity: 0.8 },
   statsGrid: { paddingHorizontal: 20, marginBottom: 20 },
   statRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   statCard: { flex: 1, padding: 20, borderRadius: 20, minHeight: 140 },
