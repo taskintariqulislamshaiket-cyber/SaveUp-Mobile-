@@ -1,3 +1,4 @@
+import WalletIcon from '../../src/components/WalletIcon';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
