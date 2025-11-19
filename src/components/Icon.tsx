@@ -11,6 +11,7 @@ interface IconProps {
 
 // Emoji fallbacks - GUARANTEED to work everywhere
 const EMOJI_ICONS: Record<string, string> = {
+  'paw': '🐾',
   'home': '🏠',
   'receipt': '🧾',
   'trophy': '🏆',

@@ -126,7 +126,7 @@ export default function PetDisplay({
     >
       <View style={[styles.container, { width: currentSize.containerSize, height: currentSize.containerSize }]}>
         <LinearGradient
-          colors={petConfig.gradient}
+          colors={['#00D4A1', '#4CAF50']}
           style={[styles.petCircle, { width: currentSize.containerSize, height: currentSize.containerSize }]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}

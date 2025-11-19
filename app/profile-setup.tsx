@@ -31,11 +31,11 @@ export default function ProfileSetup() {
   const [remainingBalance, setRemainingBalance] = useState('');
   const [salaryDay, setSalaryDay] = useState('');
   const [existingSavings, setExistingSavings] = useState('');
+  const [selectedPet, setSelectedPet] = useState<PetType | null>(null);
+  const [showPetModal, setShowPetModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPetSelector, setShowPetSelector] = useState(false);
-  const [selectedPet, setSelectedPet] = useState<PetType | null>(null);
-  
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -76,11 +76,6 @@ export default function ProfileSetup() {
     outputRange: ['0deg', '360deg'],
   });
 
-  const handlePetSelected = (petType: PetType) => {
-    setSelectedPet(petType);
-    setShowPetSelector(false);
-  };
-
   const handleSubmit = async () => {
     if (!monthlyIncome || !remainingBalance || !salaryDay) {
       setError('Please fill in all required fields');
@@ -109,6 +104,7 @@ export default function ProfileSetup() {
 
     setLoading(true);
     setError('');
+
     if (Platform.OS !== 'web') {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -124,10 +120,8 @@ export default function ProfileSetup() {
           updatedAt: new Date(),
         });
 
-        // Select the chosen pet
+        // Set up pet
         await selectPet(selectedPet);
-        
-        // Give welcome bonus gems
         await earnGems('COMPLETE_PROFILE', 50);
 
         await refreshUserProfile();
@@ -139,7 +133,6 @@ export default function ProfileSetup() {
         router.replace('/quiz');
       }
     } catch (err: any) {
-      console.error('Profile setup error:', err);
       setError(err.message || 'Failed to save profile');
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -149,267 +142,239 @@ export default function ProfileSetup() {
     }
   };
 
-  const getPetInfo = (petType: PetType) => {
+  const getPetInfo = (pet: PetType) => {
     const pets = {
-      meow: { name: 'Meow', personality: 'Anxious Saver', emoji: '🐱' },
-      doge: { name: 'Doge', personality: 'Loyal Budgeter', emoji: '🐶' },
-      finny: { name: 'Finny', personality: 'Smart Spender', emoji: '🦊' },
-      chill: { name: 'Chill', personality: 'Long-term Planner', emoji: '🐻' },
+      meow: { name: 'Meow', type: 'Anxious Saver', emoji: '🐱' },
+      doge: { name: 'Doge', type: 'Loyal Budgeter', emoji: '🐶' },
+      finny: { name: 'Finny', type: 'Smart Spender', emoji: '🦊' },
+      chill: { name: 'Chill', type: 'Long-term Planner', emoji: '🐻' },
     };
-    return pets[petType as keyof typeof pets] || pets.meow;
+    return pets[pet as keyof typeof pets] || pets.meow;
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <LinearGradient colors={['#0f172a', '#1e1b4b', '#1e293b']} style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
       >
-        <LinearGradient
-          colors={['#0f172a', '#1e1b4b', '#1e293b']}
-          style={StyleSheet.absoluteFillObject}
-        />
-
-        <Animated.View
-          style={[
-            styles.headerContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
-            },
-          ]}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={[styles.logoContainer, { transform: [{ rotate: logoSpin }] }]}>
-            <LinearGradient
-              colors={['#00D4A1', '#4CAF50', '#8BD3C7']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.logoGradient}
-            >
-              <Text style={styles.walletEmoji}>💰</Text>
-            </LinearGradient>
+          <Animated.View 
+            style={[
+              styles.header,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+              }
+            ]}
+          >
+            <Animated.View style={[styles.iconContainer, { transform: [{ rotate: logoSpin }] }]}>
+              <LinearGradient
+                colors={['#00D4A1', '#4CAF50']}
+                style={styles.iconGradient}
+              >
+                <Text style={styles.walletEmoji}>💰</Text>
+              </LinearGradient>
+            </Animated.View>
+            <Text style={styles.title}>Let's Set You Up! 🚀</Text>
+            <Text style={styles.subtitle}>This helps us personalize your experience</Text>
           </Animated.View>
 
-          <Text style={styles.title}>Let's Get Started! 🚀</Text>
-          <Text style={styles.subtitle}>Tell us about your finances</Text>
-        </Animated.View>
-
-        <Animated.View
-          style={[
-            styles.formContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💵 Monthly Income</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="cash" size={20} color="#00D4A1" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 50000"
-                placeholderTextColor="#64748b"
-                value={monthlyIncome}
-                onChangeText={setMonthlyIncome}
-                keyboardType="numeric"
-              />
-              <Text style={styles.currency}>৳</Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💳 Current Balance</Text>
-            <Text style={styles.sectionSubtitle}>How much do you have right now?</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="wallet" size={20} color="#00D4A1" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 30000"
-                placeholderTextColor="#64748b"
-                value={remainingBalance}
-                onChangeText={setRemainingBalance}
-                keyboardType="numeric"
-              />
-              <Text style={styles.currency}>৳</Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📅 Salary Day</Text>
-            <Text style={styles.sectionSubtitle}>Which day of the month?</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="calendar" size={20} color="#00D4A1" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 1"
-                placeholderTextColor="#64748b"
-                value={salaryDay}
-                onChangeText={setSalaryDay}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💎 Existing Savings (Optional)</Text>
-            <Text style={styles.sectionSubtitle}>Bank balance, investments, etc.</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="trending-up" size={20} color="#00D4A1" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 100000"
-                placeholderTextColor="#64748b"
-                value={existingSavings}
-                onChangeText={setExistingSavings}
-                keyboardType="numeric"
-              />
-              <Text style={styles.currency}>৳</Text>
-            </View>
-          </View>
-
-          {/* Pet Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Choose Your Pet Companion 🐾</Text>
-            <Text style={styles.sectionSubtitle}>
-              Pick a pet that matches your financial personality
-            </Text>
-            
-            {selectedPet ? (
-              <TouchableOpacity
-                style={styles.selectedPetCard}
-                onPress={() => setShowPetSelector(true)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#00D4A1', '#4CAF50']}
-                  style={styles.selectedPetGradient}
-                >
-                  <Text style={styles.selectedPetEmoji}>
-                    {getPetInfo(selectedPet).emoji}
-                  </Text>
-                  <View style={styles.selectedPetInfo}>
-                    <Text style={styles.selectedPetName}>
-                      {getPetInfo(selectedPet).name}
-                    </Text>
-                    <Text style={styles.selectedPetPersonality}>
-                      {getPetInfo(selectedPet).personality}
-                    </Text>
-                  </View>
-                  <Text style={styles.changePetText}>Change</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={styles.choosePetButton}
-                onPress={() => setShowPetSelector(true)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#8b5cf6', '#7c3aed']}
-                  style={styles.choosePetGradient}
-                >
-                  <Text style={styles.choosePetEmoji}>🐾</Text>
-                  <Text style={styles.choosePetText}>Choose Your Pet</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Icon name="alert-circle" size={16} color="#ef4444" />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
-          <TouchableOpacity
-            style={styles.submitButton}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.8}
+          <Animated.View 
+            style={[
+              styles.form,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }
+            ]}
           >
-            <LinearGradient
-              colors={['#00D4A1', '#4CAF50']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.submitGradient}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Text style={styles.submitText}>Continue</Text>
-                  <Icon name="arrow-forward" size={20} color="#fff" />
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>💰 Monthly Income (৳) *</Text>
+              <Text style={styles.helper}>Your salary after taxes</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="cash" size={22} color="#00D4A1" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., 50000"
+                  placeholderTextColor="#64748b"
+                  value={monthlyIncome}
+                  onChangeText={setMonthlyIncome}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
 
-        <Text style={styles.footer}>
-          🔒 Your data is private and secure
-        </Text>
-      </ScrollView>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>💳 Money Left This Month (৳) *</Text>
+              <Text style={styles.helper}>How much do you have right now?</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="wallet" size={22} color="#00D4A1" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., 20000"
+                  placeholderTextColor="#64748b"
+                  value={remainingBalance}
+                  onChangeText={setRemainingBalance}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>📅 Salary Day *</Text>
+              <Text style={styles.helper}>Which day of the month? (1-31)</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="calendar" size={22} color="#00D4A1" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., 1"
+                  placeholderTextColor="#64748b"
+                  value={salaryDay}
+                  onChangeText={setSalaryDay}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>💎 Existing Savings (৳)</Text>
+              <Text style={styles.helper}>Bank balance, FDR, investments (optional)</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="trending-up" size={22} color="#00D4A1" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., 100000"
+                  placeholderTextColor="#64748b"
+                  value={existingSavings}
+                  onChangeText={setExistingSavings}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {/* Pet Selection */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>🐾 Choose Your Pet Companion *</Text>
+              <Text style={styles.helper}>Pick one that matches your financial personality</Text>
+              
+              {selectedPet ? (
+                <TouchableOpacity
+                  style={styles.selectedPetCard}
+                  onPress={() => setShowPetModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={['#00D4A1', '#4CAF50']}
+                    style={styles.selectedPetGradient}
+                  >
+                    <Text style={styles.selectedPetEmoji}>{getPetInfo(selectedPet).emoji}</Text>
+                    <View style={styles.selectedPetInfo}>
+                      <Text style={styles.selectedPetName}>{getPetInfo(selectedPet).name}</Text>
+                      <Text style={styles.selectedPetType}>{getPetInfo(selectedPet).type}</Text>
+                    </View>
+                    <Icon name="swap-horizontal" size={20} color="#fff" />
+                  </LinearGradient>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.choosePetButton}
+                  onPress={() => setShowPetModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={['#1e293b', '#334155']}
+                    style={styles.choosePetGradient}
+                  >
+                    <Text style={styles.choosePetEmoji}>🐾</Text>
+                    <Text style={styles.choosePetText}>Tap to Choose</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Icon name="alert-circle" size={18} color="#ef4444" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleSubmit}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#00D4A1', '#4CAF50']}
+                style={styles.submitGradient}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Text style={styles.submitText}>Continue</Text>
+                    <Icon name="arrow-forward" size={22} color="#fff" />
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+
+          <Text style={styles.footer}>🔒 Your data is private and secure</Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Pet Selector Modal */}
       <PetSelector
-        visible={showPetSelector}
-        onClose={() => setShowPetSelector(false)}
-        onSelect={handlePetSelected}
+        visible={showPetModal}
+        onClose={() => setShowPetModal(false)}
+        onSelect={(pet) => {
+          setSelectedPet(pet);
+          setShowPetModal(false);
+        }}
         title="Choose Your Pet"
         subtitle="Pick a companion that matches your financial personality"
       />
-    </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  headerContainer: { alignItems: 'center', marginBottom: 32, marginTop: 40 },
-  logoContainer: { marginBottom: 16 },
-  logoGradient: {
-    width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
-  },
+  container: { flex: 1 },
+  scrollContent: { flexGrow: 1, padding: 20, paddingTop: 60, paddingBottom: 40 },
+  header: { alignItems: 'center', marginBottom: 32 },
+  iconContainer: { marginBottom: 20 },
+  iconGradient: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
   walletEmoji: { fontSize: 40 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#94a3b8' },
-  formContainer: { width: '100%', maxWidth: 400, alignSelf: 'center' },
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
-  sectionSubtitle: { fontSize: 12, color: '#64748b', marginBottom: 8 },
-  inputContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b',
-    borderRadius: 12, paddingHorizontal: 16, height: 56, borderWidth: 2, borderColor: '#334155',
-  },
+  title: { fontSize: 32, fontWeight: 'bold', color: '#fff', marginBottom: 8, textAlign: 'center' },
+  subtitle: { fontSize: 14, color: '#94a3b8', textAlign: 'center' },
+  form: { width: '100%', maxWidth: 400, alignSelf: 'center' },
+  inputGroup: { marginBottom: 24 },
+  label: { fontSize: 16, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
+  helper: { fontSize: 12, color: '#64748b', marginBottom: 8 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 12, paddingHorizontal: 16, height: 56, borderWidth: 2, borderColor: '#334155' },
   inputIcon: { marginRight: 12 },
   input: { flex: 1, color: '#fff', fontSize: 16 },
-  currency: { color: '#00D4A1', fontSize: 16, fontWeight: 'bold' },
-  selectedPetCard: { borderRadius: 16, overflow: 'hidden', marginTop: 12 },
+  selectedPetCard: { borderRadius: 16, overflow: 'hidden' },
   selectedPetGradient: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
-  selectedPetEmoji: { fontSize: 48 },
+  selectedPetEmoji: { fontSize: 36 },
   selectedPetInfo: { flex: 1 },
   selectedPetName: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  selectedPetPersonality: { fontSize: 14, color: 'rgba(255, 255, 255, 0.9)', marginTop: 2 },
-  changePetText: { fontSize: 14, color: '#fff', fontWeight: '600' },
-  choosePetButton: { borderRadius: 16, overflow: 'hidden', marginTop: 12 },
+  selectedPetType: { fontSize: 14, color: 'rgba(255, 255, 255, 0.9)', marginTop: 2 },
+  choosePetButton: { borderRadius: 16, overflow: 'hidden', borderWidth: 2, borderColor: '#334155' },
   choosePetGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 20, gap: 12 },
-  choosePetEmoji: { fontSize: 36 },
-  choosePetText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  errorContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#ef44441a',
-    borderRadius: 12, padding: 12, marginBottom: 16,
-  },
-  errorText: { color: '#ef4444', marginLeft: 8, fontSize: 14 },
-  submitButton: { marginTop: 8, marginBottom: 20 },
-  submitGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56, borderRadius: 12, gap: 8 },
+  choosePetEmoji: { fontSize: 32 },
+  choosePetText: { fontSize: 16, fontWeight: '600', color: '#94a3b8' },
+  errorContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#ef4444' },
+  errorText: { color: '#ef4444', marginLeft: 8, fontSize: 14, flex: 1 },
+  submitButton: { marginTop: 8 },
+  submitGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56, borderRadius: 16, gap: 8 },
   submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  footer: { textAlign: 'center', color: '#64748b', fontSize: 12, marginTop: 24 },
+  footer: { textAlign: 'center', color: '#64748b', fontSize: 12, marginTop: 32 },
 });

@@ -66,7 +66,7 @@ export default function PetSelector({
                   activeOpacity={0.8}
                 >
                   <LinearGradient
-                    colors={selectedPet === pet.id ? pet.gradient : ['#1e293b', '#334155']}
+                    colors={selectedPet === pet.id ? ['#00D4A1', '#4CAF50'] : ['#1e293b', '#334155']}
                     style={styles.petCardGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}

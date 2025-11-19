@@ -28,7 +28,6 @@ export default function PetTab() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Refresh will happen automatically via Firestore listeners
     setTimeout(() => setRefreshing(false), 1000);
   };
 
@@ -73,7 +72,7 @@ export default function PetTab() {
     return (
       <LinearGradient colors={[colors.background, colors.cardBackground]} style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading your pet... 🐾</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your pet... 🐾</Text>
         </View>
       </LinearGradient>
     );
@@ -88,13 +87,19 @@ export default function PetTab() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerTitle}>Your Pet 🐾</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Your Pet 🐾</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
               {unlockedCount}/{totalPets} pets unlocked
             </Text>
           </View>
@@ -113,7 +118,7 @@ export default function PetTab() {
             onPress={handleFeedPet}
             activeOpacity={0.8}
           >
-            <LinearGradient colors={['#ec4899', '#f43f5e']} style={styles.actionButtonGradient}>
+            <LinearGradient colors={[colors.primary, colors.secondary]} style={styles.actionButtonGradient}>
               <Text style={styles.actionIcon}>🍎</Text>
               <Text style={styles.actionText}>Feed Pet</Text>
               <Text style={styles.actionCost}>💎 {GEM_SPENDING_RULES.FEED_PET}</Text>
@@ -125,88 +130,98 @@ export default function PetTab() {
             onPress={() => setShowPetSelector(true)}
             activeOpacity={0.8}
           >
-            <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.actionButtonGradient}>
+            <LinearGradient colors={['#1e293b', '#334155']} style={styles.actionButtonGradient}>
               <Text style={styles.actionIcon}>🔄</Text>
               <Text style={styles.actionText}>Change Pet</Text>
-              <Text style={styles.actionCost}>{unlockedCount} available</Text>
+              <Text style={[styles.actionCost, { color: colors.primary }]}>{unlockedCount} available</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
         {/* Pet Info Card */}
-        <View style={styles.infoCard}>
-          <LinearGradient
-            colors={getPetConfig(petState.currentPet).gradient}
-            style={styles.infoCardGradient}
-          >
-            <Text style={styles.infoCardTitle}>About {getPetConfig(petState.currentPet).name}</Text>
-            <Text style={styles.infoCardDescription}>
-              {getPetConfig(petState.currentPet).description}
+        <View style={[styles.infoCard, { backgroundColor: colors.cardBackground }]}>
+          <View style={styles.infoCardHeader}>
+            <Icon name="information-circle" size={20} color={colors.primary} />
+            <Text style={[styles.infoCardTitle, { color: colors.text }]}>
+              About {getPetConfig(petState.currentPet).name}
             </Text>
-            <View style={styles.bonusContainer}>
-              <Icon name="star" size={16} color="#fbbf24" />
-              <Text style={styles.bonusText}>
-                {getPetConfig(petState.currentPet).bonusDescription}
-              </Text>
-            </View>
-          </LinearGradient>
+          </View>
+          <Text style={[styles.infoCardDescription, { color: colors.textSecondary }]}>
+            {getPetConfig(petState.currentPet).description}
+          </Text>
+          <View style={[styles.bonusContainer, { backgroundColor: colors.primary + '20', borderColor: colors.primary + '40' }]}>
+            <Icon name="star" size={16} color={colors.primary} />
+            <Text style={[styles.bonusText, { color: colors.text }]}>
+              {getPetConfig(petState.currentPet).bonusDescription}
+            </Text>
+          </View>
         </View>
 
         {/* XP Progress */}
-        <View style={styles.xpCard}>
+        <View style={[styles.xpCard, { backgroundColor: colors.cardBackground }]}>
           <View style={styles.xpHeader}>
-            <Text style={styles.xpTitle}>Level {petState.petLevel}</Text>
-            <Text style={styles.xpValue}>{petState.petXP} XP</Text>
+            <Text style={[styles.xpTitle, { color: colors.text }]}>Level {petState.petLevel}</Text>
+            <Text style={[styles.xpValue, { color: colors.primary }]}>{petState.petXP} XP</Text>
           </View>
-          <View style={styles.xpBarContainer}>
-            <View
-              style={[
-                styles.xpBar,
-                {
-                  width: `${Math.min(
-                    100,
-                    (petState.petXP % 1000) / 10
-                  )}%`,
-                },
-              ]}
+          <View style={[styles.xpBarContainer, { backgroundColor: colors.border }]}>
+            <LinearGradient
+              colors={[colors.primary, colors.secondary]}
+              style={[styles.xpBar, { width: `${Math.min(100, (petState.petXP % 1000) / 10)}%` }]}
             />
           </View>
-          <Text style={styles.xpSubtitle}>Track expenses to earn XP!</Text>
+          <Text style={[styles.xpSubtitle, { color: colors.textSecondary }]}>
+            Track expenses to earn XP!
+          </Text>
         </View>
 
         {/* Unlock Progress */}
         <View style={styles.unlockSection}>
-          <Text style={styles.sectionTitle}>Unlock More Pets 🔓</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Unlock More Pets 🔓</Text>
           {unlockStatuses
             .filter(status => !status.isUnlocked)
             .slice(0, 3)
             .map(status => {
               const petConfig = getPetConfig(status.petType);
               return (
-                <View key={status.petType} style={styles.unlockCard}>
+                <View key={status.petType} style={[styles.unlockCard, { backgroundColor: colors.cardBackground }]}>
                   <View style={styles.unlockHeader}>
                     <Text style={styles.unlockEmoji}>{petConfig.emoji}</Text>
                     <View style={styles.unlockInfo}>
-                      <Text style={styles.unlockName}>{petConfig.name}</Text>
-                      <Text style={styles.unlockRequirement}>{status.requirement}</Text>
+                      <Text style={[styles.unlockName, { color: colors.text }]}>{petConfig.name}</Text>
+                      <Text style={[styles.unlockRequirement, { color: colors.textSecondary }]}>
+                        {status.requirement}
+                      </Text>
                     </View>
                   </View>
-                  <View style={styles.progressBarContainer}>
-                    <View style={[styles.progressBar, { width: `${status.progress}%` }]} />
+                  <View style={[styles.progressBarContainer, { backgroundColor: colors.border }]}>
+                    <LinearGradient
+                      colors={[colors.primary, colors.secondary]}
+                      style={[styles.progressBar, { width: `${status.progress}%` }]}
+                    />
                   </View>
-                  <Text style={styles.progressText}>{status.progress}% complete</Text>
+                  <Text style={[styles.progressText, { color: colors.primary }]}>
+                    {status.progress}% complete
+                  </Text>
                 </View>
               );
             })}
         </View>
 
         {/* Tips */}
-        <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>💡 Pet Care Tips</Text>
-          <Text style={styles.tipItem}>• Feed your pet regularly to keep happiness high</Text>
-          <Text style={styles.tipItem}>• Stay under budget to make your pet happy</Text>
-          <Text style={styles.tipItem}>• Track expenses daily to earn XP and level up</Text>
-          <Text style={styles.tipItem}>• Complete goals to unlock rare pets</Text>
+        <View style={[styles.tipsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <Text style={[styles.tipsTitle, { color: colors.text }]}>💡 Pet Care Tips</Text>
+          <Text style={[styles.tipItem, { color: colors.textSecondary }]}>
+            • Feed your pet regularly to keep happiness high
+          </Text>
+          <Text style={[styles.tipItem, { color: colors.textSecondary }]}>
+            • Stay under budget to make your pet happy
+          </Text>
+          <Text style={[styles.tipItem, { color: colors.textSecondary }]}>
+            • Track expenses daily to earn XP and level up
+          </Text>
+          <Text style={[styles.tipItem, { color: colors.textSecondary }]}>
+            • Complete goals to unlock rare pets
+          </Text>
         </View>
       </ScrollView>
 
@@ -223,212 +238,45 @@ export default function PetTab() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#94a3b8',
-    fontSize: 18,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 40,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#94a3b8',
-    marginTop: 4,
-  },
-  petDisplayContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  actionButton: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  actionButtonGradient: {
-    padding: 16,
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionIcon: {
-    fontSize: 32,
-  },
-  actionText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  actionCost: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-  },
-  infoCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 24,
-  },
-  infoCardGradient: {
-    padding: 20,
-  },
-  infoCardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  infoCardDescription: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  bonusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 12,
-    borderRadius: 12,
-  },
-  bonusText: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  xpCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  xpHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  xpTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  xpValue: {
-    fontSize: 16,
-    color: '#00D4A1',
-    fontWeight: '600',
-  },
-  xpBarContainer: {
-    height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  xpBar: {
-    height: '100%',
-    backgroundColor: '#00D4A1',
-    borderRadius: 4,
-  },
-  xpSubtitle: {
-    fontSize: 12,
-    color: '#94a3b8',
-  },
-  unlockSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 16,
-  },
-  unlockCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  unlockHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  unlockEmoji: {
-    fontSize: 40,
-  },
-  unlockInfo: {
-    flex: 1,
-  },
-  unlockName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  unlockRequirement: {
-    fontSize: 12,
-    color: '#94a3b8',
-  },
-  progressBarContainer: {
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#00D4A1',
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 11,
-    color: '#00D4A1',
-    fontWeight: '600',
-  },
-  tipsCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  tipsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 12,
-  },
-  tipItem: {
-    fontSize: 14,
-    color: '#94a3b8',
-    lineHeight: 22,
-    marginBottom: 8,
-  },
+  container: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { fontSize: 18 },
+  scrollContent: { padding: 20, paddingBottom: 100, paddingTop: 60 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  headerTitle: { fontSize: 32, fontWeight: 'bold' },
+  headerSubtitle: { fontSize: 14, marginTop: 4 },
+  petDisplayContainer: { alignItems: 'center', marginBottom: 32 },
+  actionsContainer: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+  actionButton: { flex: 1, borderRadius: 16, overflow: 'hidden' },
+  actionButtonGradient: { padding: 16, alignItems: 'center', gap: 4 },
+  actionIcon: { fontSize: 32 },
+  actionText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  actionCost: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 12 },
+  infoCard: { borderRadius: 16, padding: 20, marginBottom: 24 },
+  infoCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  infoCardTitle: { fontSize: 18, fontWeight: 'bold' },
+  infoCardDescription: { fontSize: 14, lineHeight: 20, marginBottom: 12 },
+  bonusContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1 },
+  bonusText: { flex: 1, fontSize: 13, fontWeight: '600' },
+  xpCard: { borderRadius: 16, padding: 20, marginBottom: 24 },
+  xpHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  xpTitle: { fontSize: 18, fontWeight: 'bold' },
+  xpValue: { fontSize: 16, fontWeight: '600' },
+  xpBarContainer: { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 8 },
+  xpBar: { height: '100%', borderRadius: 4 },
+  xpSubtitle: { fontSize: 12 },
+  unlockSection: { marginBottom: 24 },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
+  unlockCard: { borderRadius: 16, padding: 16, marginBottom: 12 },
+  unlockHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  unlockEmoji: { fontSize: 40 },
+  unlockInfo: { flex: 1 },
+  unlockName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  unlockRequirement: { fontSize: 12 },
+  progressBarContainer: { height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 8 },
+  progressBar: { height: '100%', borderRadius: 3 },
+  progressText: { fontSize: 11, fontWeight: '600' },
+  tipsCard: { borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1 },
+  tipsTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  tipItem: { fontSize: 14, lineHeight: 22, marginBottom: 8 },
 });
