@@ -63,7 +63,7 @@ const slides = [
 ];
 
 export default function Index() {
-  const { user, userProfile, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
@@ -75,16 +75,14 @@ export default function Index() {
 
   useEffect(() => {
     if (!loading && !checkingOnboarding) {
-      console.log('🔍 Navigation check:', { user: !!user, userProfile, hasSeenOnboarding });
       handleNavigation();
     }
-  }, [user, userProfile, loading, checkingOnboarding]);
+  }, [user, loading, checkingOnboarding]);
 
   const checkOnboardingStatus = async () => {
     try {
       const seen = await AsyncStorage.getItem('hasSeenOnboarding');
       setHasSeenOnboarding(seen === 'true');
-      console.log('✅ Has seen onboarding:', seen === 'true');
     } catch (error) {
       console.error('Error checking onboarding:', error);
     } finally {
@@ -93,26 +91,11 @@ export default function Index() {
   };
 
   const handleNavigation = () => {
-    // If user is logged in
+    // If user is logged in, go straight to tabs
+    // Let _layout.tsx in tabs handle profile-setup/quiz navigation
     if (user) {
-      console.log('👤 User logged in, checking profile...');
-      console.log('Profile data:', userProfile);
-      
-      // Check profile completion
-      if (!userProfile?.profileComplete) {
-        console.log('→ Profile incomplete, going to profile-setup');
-        router.replace('/profile-setup');
-      }
-      // Check personality quiz completion
-      else if (!userProfile?.moneyPersonality && !userProfile?.quizCompleted) {
-        console.log('→ No personality, going to quiz');
-        router.replace('/quiz');
-      }
-      // Go to dashboard
-      else {
-        console.log('→ Everything complete, going to dashboard');
-        router.replace('/(tabs)');
-      }
+      console.log('✅ User logged in, going to tabs');
+      router.replace('/(tabs)');
     }
     // If no user and has seen onboarding, go to login
     else if (hasSeenOnboarding) {
@@ -120,9 +103,6 @@ export default function Index() {
       router.replace('/login');
     }
     // Otherwise show onboarding (first-time user)
-    else {
-      console.log('→ Showing onboarding (first-time user)');
-    }
   };
 
   const handleNext = async () => {

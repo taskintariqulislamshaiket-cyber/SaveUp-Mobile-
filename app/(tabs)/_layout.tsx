@@ -1,9 +1,30 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import Icon from '../../src/components/Icon';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const { user, userProfile, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      console.log('🔍 Tabs: Checking profile...', userProfile);
+      
+      // If profile not complete, go to profile-setup
+      if (!userProfile?.profileComplete) {
+        console.log('→ Tabs: Redirecting to profile-setup');
+        router.replace('/profile-setup');
+      }
+      // If quiz not complete, go to quiz
+      else if (!userProfile?.moneyPersonality && !userProfile?.quizCompleted) {
+        console.log('→ Tabs: Redirecting to quiz');
+        router.replace('/quiz');
+      }
+    }
+  }, [user, userProfile, loading]);
 
   return (
     <Tabs
