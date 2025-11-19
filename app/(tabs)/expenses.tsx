@@ -39,7 +39,6 @@ export default function ExpensesTab() {
   const { user, userProfile } = useAuth();
   const { colors } = useTheme();
   const { earnGems, addXP, updateMoodFromSpending } = usePet();
-  const router = useRouter();
 
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

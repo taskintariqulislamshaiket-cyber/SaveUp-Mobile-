@@ -264,7 +264,7 @@ export default function ProfileSetup() {
               <TextInput
                 style={styles.input}
                 placeholder="e.g., 100000"
-                placeholderTextColor="#64748b"}
+                placeholderTextColor="#64748b"
                 value={existingSavings}
                 onChangeText={setExistingSavings}
                 keyboardType="numeric"
