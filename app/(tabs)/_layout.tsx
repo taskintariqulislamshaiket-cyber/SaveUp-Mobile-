@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '../../src/components/Icon';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -8,23 +8,33 @@ export default function TabLayout() {
   const { colors } = useTheme();
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) {
-      console.log('🔍 Tabs: Checking profile...', userProfile);
+    // Only check once when profile loads
+    if (!loading && user && userProfile && !hasChecked) {
+      console.log('🔍 Tabs: Profile loaded, checking...', {
+        profileComplete: userProfile.profileComplete,
+        moneyPersonality: userProfile.moneyPersonality,
+        quizCompleted: userProfile.quizCompleted
+      });
       
-      // If profile not complete, go to profile-setup
-      if (!userProfile?.profileComplete) {
-        console.log('→ Tabs: Redirecting to profile-setup');
-        router.replace('/profile-setup');
-      }
-      // If quiz not complete, go to quiz
-      else if (!userProfile?.moneyPersonality && !userProfile?.quizCompleted) {
-        console.log('→ Tabs: Redirecting to quiz');
-        router.replace('/quiz');
-      }
+      setHasChecked(true);
+      
+      // Wait a bit to ensure profile is fully loaded
+      setTimeout(() => {
+        if (!userProfile.profileComplete) {
+          console.log('→ Tabs: Redirecting to profile-setup');
+          router.replace('/profile-setup');
+        } else if (!userProfile.moneyPersonality && !userProfile.quizCompleted) {
+          console.log('→ Tabs: Redirecting to quiz');
+          router.replace('/quiz');
+        } else {
+          console.log('✅ Tabs: Profile complete, staying in tabs');
+        }
+      }, 500);
     }
-  }, [user, userProfile, loading]);
+  }, [user, userProfile, loading, hasChecked]);
 
   return (
     <Tabs
