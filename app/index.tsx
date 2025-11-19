@@ -3,15 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../src/contexts/AuthContext';
-import { ActivityIndicator } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const slides = [
   {
@@ -48,11 +46,11 @@ const slides = [
   },
   {
     id: 5,
-    title: 'Dream. Plan. Achieve. ��',
+    title: 'Dream. Plan. Achieve. 💎💎',
     subtitle: 'New phone? Vacation?',
     description: 'Set goals and track progress.',
     emoji: '🏆',
-    gradient: ['#10b981', '#059669'],
+    gradient: ['#00D4A1', '#4CAF50'],
   },
   {
     id: 6,
@@ -60,7 +58,7 @@ const slides = [
     subtitle: 'Join 10,000+ Bangladeshis',
     description: 'Free forever. Start now.',
     emoji: '🚀',
-    gradient: ['#8b5cf6', '#ec4899'],
+    gradient: ['#8b5cf6', '#a78bfa'],
   },
 ];
 
@@ -68,44 +66,68 @@ export default function Index() {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
   useEffect(() => {
-    if (!loading && user) {
-      console.log('✅ User logged in, checking profile...', userProfile);
-      
-      // ✅ FIX: Check profileComplete field (what profile-setup actually sets)
+    checkOnboardingStatus();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && !checkingOnboarding) {
+      handleNavigation();
+    }
+  }, [user, userProfile, loading, checkingOnboarding, hasSeenOnboarding]);
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const seen = await AsyncStorage.getItem('hasSeenOnboarding');
+      setHasSeenOnboarding(seen === 'true');
+    } catch (error) {
+      console.error('Error checking onboarding:', error);
+    } finally {
+      setCheckingOnboarding(false);
+    }
+  };
+
+  const handleNavigation = () => {
+    // If user is logged in
+    if (user) {
+      // Check profile completion
       if (!userProfile?.profileComplete) {
-        console.log('→ Profile incomplete, going to profile-setup');
         router.replace('/profile-setup');
       }
-      // Then check personality quiz
-      else if (!userProfile?.personalityType) {
-        console.log('→ No personality type, going to quiz');
+      // Check personality quiz completion (fix field name!)
+      else if (!userProfile?.moneyPersonality && !userProfile?.quizCompleted) {
         router.replace('/quiz');
       }
-      // Finally go to dashboard
+      // Go to dashboard
       else {
-        console.log('→ Everything complete, going to dashboard');
         router.replace('/(tabs)');
       }
     }
-  }, [user, userProfile, loading]);
+    // If no user and has seen onboarding, go to login
+    else if (hasSeenOnboarding) {
+      router.replace('/login');
+    }
+    // Otherwise show onboarding (handled by component render)
+  };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentIndex < slides.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      console.log('✅ Onboarding complete, going to login');
-      router.push('/login');
+      await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+      router.replace('/login');
     }
   };
 
-  const handleSkip = () => {
-    console.log('✅ Onboarding skipped, going to login');
-    router.push('/login');
+  const handleSkip = async () => {
+    await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+    router.replace('/login');
   };
 
-  if (loading) {
+  if (loading || checkingOnboarding) {
     return (
       <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
         <ActivityIndicator size="large" color="#00D4A1" />
@@ -113,7 +135,8 @@ export default function Index() {
     );
   }
 
-  if (user) {
+  // If logged in or has seen onboarding, let useEffect handle navigation
+  if (user || hasSeenOnboarding) {
     return (
       <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
         <ActivityIndicator size="large" color="#00D4A1" />
@@ -121,6 +144,7 @@ export default function Index() {
     );
   }
 
+  // Show onboarding for first-time users
   const currentSlide = slides[currentIndex];
 
   return (
@@ -129,67 +153,50 @@ export default function Index() {
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
 
-      <LinearGradient
-        colors={currentSlide.gradient}
-        style={styles.content}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.slideContent}>
-          <View style={styles.iconCircle}>
-            <Text style={styles.emoji}>{currentSlide.emoji}</Text>
-          </View>
-
-          <Text style={styles.title}>{currentSlide.title}</Text>
-          <Text style={styles.subtitle}>{currentSlide.subtitle}</Text>
-          <Text style={styles.description}>{currentSlide.description}</Text>
+      <LinearGradient colors={currentSlide.gradient} style={styles.content}>
+        <View style={styles.emojiCircle}>
+          <Text style={styles.emoji}>{currentSlide.emoji}</Text>
         </View>
-      </LinearGradient>
 
-      <View style={styles.footer}>
+        <Text style={styles.title}>{currentSlide.title}</Text>
+        <Text style={styles.subtitle}>{currentSlide.subtitle}</Text>
+        <Text style={styles.description}>{currentSlide.description}</Text>
+
         <View style={styles.pagination}>
           {slides.map((_, index) => (
             <View
               key={index}
               style={[
                 styles.dot,
-                index === currentIndex && styles.dotActive,
+                index === currentIndex && styles.activeDot,
               ]}
             />
           ))}
         </View>
 
         <TouchableOpacity style={styles.button} onPress={handleNext}>
-          <LinearGradient
-            colors={currentSlide.gradient}
-            style={styles.buttonGradient}
-          >
-            <Text style={styles.buttonText}>
-              {currentIndex === slides.length - 1 ? 'Get Started →' : 'Next →'}
-            </Text>
-          </LinearGradient>
+          <Text style={styles.buttonText}>
+            {currentIndex === slides.length - 1 ? 'Get Started →' : 'Next →'}
+          </Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  skipButton: { position: 'absolute', top: 50, right: 20, zIndex: 10, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255, 255, 255, 0.2)' },
-  skipText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
-  slideContent: { alignItems: 'center' },
-  iconCircle: { width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 60 },
+  container: { flex: 1 },
+  skipButton: { position: 'absolute', top: 60, right: 20, zIndex: 10, padding: 12 },
+  skipText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  emojiCircle: { width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 40 },
   emoji: { fontSize: 80 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#fff', textAlign: 'center', marginBottom: 16 },
+  title: { fontSize: 32, fontWeight: 'bold', color: '#fff', textAlign: 'center', marginBottom: 16 },
   subtitle: { fontSize: 18, color: 'rgba(255, 255, 255, 0.9)', textAlign: 'center', marginBottom: 12 },
-  description: { fontSize: 16, color: 'rgba(255, 255, 255, 0.8)', textAlign: 'center', maxWidth: 320 },
-  footer: { position: 'absolute', bottom: 50, left: 0, right: 0, paddingHorizontal: 30, alignItems: 'center' },
-  pagination: { flexDirection: 'row', marginBottom: 30, gap: 8 },
+  description: { fontSize: 16, color: 'rgba(255, 255, 255, 0.8)', textAlign: 'center', marginBottom: 60 },
+  pagination: { flexDirection: 'row', gap: 8, marginBottom: 40 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255, 255, 255, 0.3)' },
-  dotActive: { width: 24, backgroundColor: '#fff' },
-  button: { width: '100%' },
-  buttonGradient: { height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  activeDot: { backgroundColor: '#fff', width: 24 },
+  button: { backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 40, paddingVertical: 16, borderRadius: 12 },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 });
