@@ -9,7 +9,7 @@ interface WalletIconProps {
 export default function WalletIcon({ size = 100 }: WalletIconProps) {
   return (
     <View style={{ width: size, height: size }}>
-      <Svg width={size} height={size} viewBox="0 0 120 120">
+      <Svg width={size} height={size} viewBox="15 15 90 90">
         <Circle cx="60" cy="60" r="60" fill="#00D4A1" />
         <Rect x="25" y="45" width="70" height="45" rx="6" fill="#B8764F" />
         <Path d="M 25 52 L 95 52" stroke="#8B5A3C" strokeWidth="1.5" />
