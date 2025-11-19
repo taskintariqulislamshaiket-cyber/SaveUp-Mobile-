@@ -75,14 +75,16 @@ export default function Index() {
 
   useEffect(() => {
     if (!loading && !checkingOnboarding) {
+      console.log('🔍 Navigation check:', { user: !!user, userProfile, hasSeenOnboarding });
       handleNavigation();
     }
-  }, [user, userProfile, loading, checkingOnboarding, hasSeenOnboarding]);
+  }, [user, userProfile, loading, checkingOnboarding]);
 
   const checkOnboardingStatus = async () => {
     try {
       const seen = await AsyncStorage.getItem('hasSeenOnboarding');
       setHasSeenOnboarding(seen === 'true');
+      console.log('✅ Has seen onboarding:', seen === 'true');
     } catch (error) {
       console.error('Error checking onboarding:', error);
     } finally {
@@ -93,24 +95,34 @@ export default function Index() {
   const handleNavigation = () => {
     // If user is logged in
     if (user) {
+      console.log('👤 User logged in, checking profile...');
+      console.log('Profile data:', userProfile);
+      
       // Check profile completion
       if (!userProfile?.profileComplete) {
+        console.log('→ Profile incomplete, going to profile-setup');
         router.replace('/profile-setup');
       }
-      // Check personality quiz completion (fix field name!)
+      // Check personality quiz completion
       else if (!userProfile?.moneyPersonality && !userProfile?.quizCompleted) {
+        console.log('→ No personality, going to quiz');
         router.replace('/quiz');
       }
       // Go to dashboard
       else {
+        console.log('→ Everything complete, going to dashboard');
         router.replace('/(tabs)');
       }
     }
     // If no user and has seen onboarding, go to login
     else if (hasSeenOnboarding) {
+      console.log('→ Has seen onboarding, going to login');
       router.replace('/login');
     }
-    // Otherwise show onboarding (handled by component render)
+    // Otherwise show onboarding (first-time user)
+    else {
+      console.log('→ Showing onboarding (first-time user)');
+    }
   };
 
   const handleNext = async () => {
@@ -118,12 +130,14 @@ export default function Index() {
       setCurrentIndex(currentIndex + 1);
     } else {
       await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+      setHasSeenOnboarding(true);
       router.replace('/login');
     }
   };
 
   const handleSkip = async () => {
     await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+    setHasSeenOnboarding(true);
     router.replace('/login');
   };
 
@@ -131,15 +145,17 @@ export default function Index() {
     return (
       <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
         <ActivityIndicator size="large" color="#00D4A1" />
+        <Text style={styles.loadingText}>Loading...</Text>
       </LinearGradient>
     );
   }
 
-  // If logged in or has seen onboarding, let useEffect handle navigation
+  // If logged in or has seen onboarding, show loading while navigation happens
   if (user || hasSeenOnboarding) {
     return (
       <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.container}>
         <ActivityIndicator size="large" color="#00D4A1" />
+        <Text style={styles.loadingText}>Redirecting...</Text>
       </LinearGradient>
     );
   }
@@ -199,4 +215,5 @@ const styles = StyleSheet.create({
   activeDot: { backgroundColor: '#fff', width: 24 },
   button: { backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 40, paddingVertical: 16, borderRadius: 12 },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  loadingText: { color: '#94a3b8', marginTop: 16, fontSize: 14 },
 });
