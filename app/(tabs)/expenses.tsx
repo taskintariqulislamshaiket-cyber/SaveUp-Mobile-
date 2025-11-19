@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Keyboard,
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,7 +19,6 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { db } from '../../src/config/firebase-config';
 import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
 import { usePet } from '../../src/contexts/PetContext';
 import { calculateXPEarned } from '../../src/utils/pet/gemCalculator';
 import GemCounter from '../../src/components/pet/GemCounter';
@@ -46,15 +44,12 @@ export default function ExpensesScreen() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Food');
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     loadExpenses();
-    loadSound();
 
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -62,40 +57,13 @@ export default function ExpensesScreen() {
         duration: 600,
         useNativeDriver: true,
       }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
         useNativeDriver: true,
       }),
     ]).start();
-
-    const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => setKeyboardHeight(e.endCoordinates.height)
-    );
-    const keyboardWillHide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardHeight(0)
-    );
-
-    return () => {
-      keyboardWillShow.remove();
-      keyboardWillHide.remove();
-      if (sound) sound.unloadAsync();
-    };
   }, [user]);
-
-  const loadSound = async () => {
-    try {
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        require('../../assets/coin.mp3')
-      );
-      setSound(newSound);
-    } catch (error) {
-      console.log('Sound loading failed (non-critical):', error);
-    }
-  };
 
   const loadExpenses = async () => {
     if (!user) return;
@@ -124,7 +92,7 @@ export default function ExpensesScreen() {
 
   const handleAddExpense = async () => {
     if (!amount || !description) {
-      Alert.alert('Oops! 😅', 'Please fill in all fields');
+      Alert.alert('Missing Info', 'Please fill in amount and description');
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
@@ -133,10 +101,8 @@ export default function ExpensesScreen() {
 
     try {
       if (Platform.OS !== 'web') {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-      
-      if (sound) await sound.replayAsync();
 
       const expenseAmount = parseFloat(amount);
 
@@ -149,11 +115,11 @@ export default function ExpensesScreen() {
         createdAt: new Date(),
       });
 
-      // Pet rewards (silent, non-blocking)
+      // Pet rewards (silent)
       try {
         await earnGems('TRACK_EXPENSE');
         await addXP(calculateXPEarned(expenseAmount));
-      } catch (e) { /* silent fail */ }
+      } catch (e) { /* silent */ }
 
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -171,17 +137,30 @@ export default function ExpensesScreen() {
   };
 
   const handleDeleteExpense = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'expenses', id));
-      loadExpenses();
-      
-      if (Platform.OS !== 'web') {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    } catch (error) {
-      console.error('Error deleting expense:', error);
-      Alert.alert('Error', 'Failed to delete expense');
-    }
+    Alert.alert(
+      'Delete Expense',
+      'Are you sure you want to delete this expense?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'expenses', id));
+              loadExpenses();
+              
+              if (Platform.OS !== 'web') {
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+            } catch (error) {
+              console.error('Error deleting expense:', error);
+              Alert.alert('Error', 'Failed to delete expense');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getTotalExpenses = () => {
@@ -197,43 +176,43 @@ export default function ExpensesScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={[colors.background, colors.cardBackground]} style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading expenses...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading expenses...</Text>
         </View>
-      </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <LinearGradient colors={[colors.background, colors.cardBackground]} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View
         style={[
           styles.content,
           {
             opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
+            transform: [{ translateY: slideAnim }],
           },
         ]}
       >
-        {/* Header with Gem Counter */}
+        {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerTitle}>Expenses 💸</Text>
-            <Text style={styles.headerSubtitle}>Track every taka</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Expenses 💸</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Track every taka</Text>
           </View>
           <GemCounter size="small" />
         </View>
 
         {/* Summary Cards */}
         <View style={styles.summaryContainer}>
-          <View style={[styles.summaryCard, { backgroundColor: colors.cardBackground }]}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Today</Text>
             <Text style={[styles.summaryAmount, { color: colors.text }]}>
               ৳{getTodayExpenses().toLocaleString()}
             </Text>
           </View>
-          <View style={[styles.summaryCard, { backgroundColor: colors.cardBackground }]}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total</Text>
             <Text style={[styles.summaryAmount, { color: colors.text }]}>
               ৳{getTotalExpenses().toLocaleString()}
@@ -255,7 +234,7 @@ export default function ExpensesScreen() {
             expenses.map((expense) => {
               const category = CATEGORIES.find(c => c.name === expense.category) || CATEGORIES[6];
               return (
-                <View key={expense.id} style={[styles.expenseCard, { backgroundColor: colors.cardBackground }]}>
+                <View key={expense.id} style={[styles.expenseCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <View style={[styles.expenseIcon, { backgroundColor: category.color + '20' }]}>
                     <Icon name={category.icon} size={24} color={category.color} />
                   </View>
@@ -263,7 +242,7 @@ export default function ExpensesScreen() {
                     <Text style={[styles.expenseDescription, { color: colors.text }]}>
                       {expense.description}
                     </Text>
-                    <Text style={[styles.expenseCategory, { color: colors.primary }]}>
+                    <Text style={styles.expenseCategory} numberOfLines={1}>
                       {expense.category}
                     </Text>
                     <Text style={[styles.expenseDate, { color: colors.textSecondary }]}>
@@ -274,18 +253,7 @@ export default function ExpensesScreen() {
                     <Text style={[styles.expenseAmount, { color: colors.text }]}>
                       ৳{expense.amount.toLocaleString()}
                     </Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        Alert.alert(
-                          'Delete Expense',
-                          'Are you sure?',
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Delete', style: 'destructive', onPress: () => handleDeleteExpense(expense.id) },
-                          ]
-                        );
-                      }}
-                    >
+                    <TouchableOpacity onPress={() => handleDeleteExpense(expense.id)}>
                       <Icon name="trash" size={20} color="#ef4444" />
                     </TouchableOpacity>
                   </View>
@@ -301,7 +269,7 @@ export default function ExpensesScreen() {
           onPress={() => setModalVisible(true)}
           activeOpacity={0.8}
         >
-          <LinearGradient colors={[colors.primary, colors.secondary]} style={styles.addButtonGradient}>
+          <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.addButtonGradient}>
             <Icon name="add" size={28} color="#fff" />
           </LinearGradient>
         </TouchableOpacity>
@@ -317,15 +285,8 @@ export default function ExpensesScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.modalOverlay}
           >
-            <TouchableOpacity
-              style={styles.modalBackdrop}
-              activeOpacity={1}
-              onPress={() => {
-                Keyboard.dismiss();
-                setModalVisible(false);
-              }}
-            />
-            <View style={[styles.modalContent, { backgroundColor: colors.cardBackground, marginBottom: keyboardHeight }]}>
+            <View style={styles.modalBackdrop} />
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
               <View style={styles.modalHeader}>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>Add Expense</Text>
                 <TouchableOpacity onPress={() => setModalVisible(false)}>
@@ -379,7 +340,7 @@ export default function ExpensesScreen() {
               </View>
 
               <TouchableOpacity style={styles.saveButton} onPress={handleAddExpense} activeOpacity={0.8}>
-                <LinearGradient colors={[colors.primary, colors.secondary]} style={styles.saveButtonGradient}>
+                <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.saveButtonGradient}>
                   <Text style={styles.saveButtonText}>Add Expense</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -387,20 +348,20 @@ export default function ExpensesScreen() {
           </KeyboardAvoidingView>
         </Modal>
       </Animated.View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: '#94a3b8', fontSize: 16 },
+  loadingText: { fontSize: 16 },
   content: { flex: 1, padding: 20, paddingTop: 60 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  headerTitle: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
-  headerSubtitle: { fontSize: 14, color: '#94a3b8', marginTop: 4 },
+  headerTitle: { fontSize: 32, fontWeight: 'bold' },
+  headerSubtitle: { fontSize: 14, marginTop: 4 },
   summaryContainer: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  summaryCard: { flex: 1, borderRadius: 16, padding: 16 },
+  summaryCard: { flex: 1, borderRadius: 16, padding: 16, borderWidth: 1 },
   summaryLabel: { fontSize: 12, marginBottom: 8 },
   summaryAmount: { fontSize: 24, fontWeight: 'bold' },
   expensesList: { flex: 1, marginBottom: 80 },
@@ -408,25 +369,25 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 64, marginBottom: 16 },
   emptyText: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
   emptySubtext: { fontSize: 14 },
-  expenseCard: { flexDirection: 'row', borderRadius: 16, padding: 16, marginBottom: 12, alignItems: 'center' },
+  expenseCard: { flexDirection: 'row', borderRadius: 16, padding: 16, marginBottom: 12, alignItems: 'center', borderWidth: 1 },
   expenseIcon: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   expenseInfo: { flex: 1 },
   expenseDescription: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
-  expenseCategory: { fontSize: 12, marginBottom: 2 },
+  expenseCategory: { fontSize: 12, color: '#00D4A1', marginBottom: 2 },
   expenseDate: { fontSize: 11 },
   expenseRight: { alignItems: 'flex-end', gap: 8 },
   expenseAmount: { fontSize: 18, fontWeight: 'bold' },
   addButton: { position: 'absolute', bottom: 20, right: 20, borderRadius: 999, overflow: 'hidden', shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
   addButtonGradient: { width: 64, height: 64, justifyContent: 'center', alignItems: 'center' },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)' },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+  modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { fontSize: 24, fontWeight: 'bold' },
   inputContainer: { marginBottom: 20 },
   inputLabel: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
   input: { borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 2 },
-  categories: { flexDirection: 'row', gap: 8 },
+  categories: { flexDirection: 'row' },
   categoryChip: { borderRadius: 12, paddingVertical: 8, paddingHorizontal: 16, marginRight: 8, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 2 },
   categoryLabel: { fontSize: 14, fontWeight: '600' },
   saveButton: { marginTop: 8, borderRadius: 12, overflow: 'hidden' },

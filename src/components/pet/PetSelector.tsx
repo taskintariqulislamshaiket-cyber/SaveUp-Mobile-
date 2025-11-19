@@ -30,7 +30,7 @@ export default function PetSelector({
   const handleSelect = () => {
     if (selectedPet) {
       onSelect(selectedPet);
-      onClose();
+      setSelectedPet(null);
     }
   };
 
@@ -47,13 +47,15 @@ export default function PetSelector({
             colors={['#1e293b', '#0f172a']}
             style={styles.content}
           >
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>{subtitle}</Text>
+            <View style={styles.header}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>{subtitle}</Text>
+            </View>
 
             <ScrollView 
               style={styles.petList}
               contentContainerStyle={styles.petListContent}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
             >
               {availablePets.map((pet) => (
                 <TouchableOpacity
@@ -65,12 +67,10 @@ export default function PetSelector({
                   onPress={() => setSelectedPet(pet.id)}
                   activeOpacity={0.8}
                 >
-                  <LinearGradient
-                    colors={selectedPet === pet.id ? ['#00D4A1', '#4CAF50'] : ['#1e293b', '#334155']}
-                    style={styles.petCardGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
+                  <View style={[
+                    styles.petCardContent,
+                    { backgroundColor: selectedPet === pet.id ? '#00D4A1' : '#334155' }
+                  ]}>
                     <Text style={styles.petEmoji}>{pet.emoji}</Text>
                     <View style={styles.petInfo}>
                       <Text style={styles.petName}>{pet.name}</Text>
@@ -80,10 +80,10 @@ export default function PetSelector({
                       </Text>
                       <View style={styles.bonusContainer}>
                         <Text style={styles.bonusLabel}>✨ Bonus:</Text>
-                        <Text style={styles.bonusText}>{pet.bonusDescription}</Text>
+                        <Text style={styles.bonusText} numberOfLines={1}>{pet.bonusDescription}</Text>
                       </View>
                     </View>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -129,12 +129,16 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     maxWidth: 500,
-    maxHeight: '80%',
+    maxHeight: '85%',
     borderRadius: 24,
     overflow: 'hidden',
   },
   content: {
+    flex: 1,
     padding: 24,
+  },
+  header: {
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
@@ -146,14 +150,14 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#94a3b8',
-    marginBottom: 24,
     textAlign: 'center',
   },
   petList: {
-    marginBottom: 20,
+    flex: 1,
   },
   petListContent: {
     gap: 12,
+    paddingBottom: 20,
   },
   petCard: {
     borderRadius: 16,
@@ -164,10 +168,11 @@ const styles = StyleSheet.create({
   petCardSelected: {
     borderColor: '#00D4A1',
   },
-  petCardGradient: {
+  petCardContent: {
     flexDirection: 'row',
     padding: 16,
     gap: 16,
+    borderRadius: 16,
   },
   petEmoji: {
     fontSize: 60,
@@ -183,33 +188,37 @@ const styles = StyleSheet.create({
   },
   petPersonality: {
     fontSize: 14,
-    color: '#00D4A1',
+    color: '#fff',
     fontWeight: '600',
+    opacity: 0.9,
   },
   petDescription: {
     fontSize: 12,
-    color: '#cbd5e1',
+    color: '#fff',
     marginTop: 4,
+    opacity: 0.8,
   },
   bonusContainer: {
     marginTop: 8,
-    backgroundColor: 'rgba(0, 212, 161, 0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderRadius: 8,
     padding: 8,
   },
   bonusLabel: {
     fontSize: 10,
-    color: '#00D4A1',
+    color: '#fff',
     fontWeight: 'bold',
     marginBottom: 2,
   },
   bonusText: {
     fontSize: 11,
-    color: '#e2e8f0',
+    color: '#fff',
+    opacity: 0.9,
   },
   buttonContainer: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 20,
   },
   cancelButton: {
     flex: 1,
