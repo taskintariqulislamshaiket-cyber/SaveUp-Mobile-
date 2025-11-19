@@ -57,7 +57,7 @@ export default function TabLayout() {
         name="insights"
         options={{
           title: 'Insights',
-          tabBarIcon: ({ color, size }) => <Icon name="stats-chart" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Icon name="bulb" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
