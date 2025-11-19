@@ -16,12 +16,14 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../src/contexts/AuthContext';
+import { useRouter } from 'expo-router';
 import Icon from '../src/components/Icon';
 
 const { width, height } = Dimensions.get('window');
 
 export default function LoginPage() {
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, user, userProfile } = useAuth();
+  const router = useRouter();
   
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -36,6 +38,27 @@ export default function LoginPage() {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const logoRotate = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Navigate when user logs in
+  useEffect(() => {
+    if (user && !loading) {
+      console.log('🚀 User detected in login page, navigating...');
+      
+      // Wait a bit for profile to load
+      setTimeout(() => {
+        if (!userProfile?.profileComplete) {
+          console.log('→ Going to profile-setup');
+          router.replace('/profile-setup');
+        } else if (!userProfile?.moneyPersonality && !userProfile?.quizCompleted) {
+          console.log('→ Going to quiz');
+          router.replace('/quiz');
+        } else {
+          console.log('→ Going to dashboard');
+          router.replace('/(tabs)');
+        }
+      }, 500);
+    }
+  }, [user, userProfile, loading]);
 
   useEffect(() => {
     Animated.parallel([
@@ -118,7 +141,7 @@ export default function LoginPage() {
         await signUp(email.trim(), password);
       }
 
-      await new Promise(resolve => setTimeout(resolve, 800));
+      console.log('✅ Auth successful, waiting for navigation...');
 
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -126,11 +149,10 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error('Auth error:', err);
       setError(err.message || 'Authentication failed');
+      setLoading(false);
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -143,7 +165,6 @@ export default function LoginPage() {
 
     try {
       await signInWithGoogle();
-      await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -151,11 +172,10 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error('Google Sign-In error:', err);
       setError(err.message || 'Google Sign-In failed');
+      setLoading(false);
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -383,7 +403,6 @@ const styles = StyleSheet.create({
     shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5,
     shadowRadius: 16, elevation: 10,
   },
-  walletEmoji: { fontSize: 50 },
   title: { fontSize: 48, fontWeight: 'bold', color: '#fff', marginBottom: 8, letterSpacing: 1 },
   tagline: { fontSize: 16, color: '#94a3b8', textAlign: 'center', marginBottom: 4, fontStyle: 'italic' },
   subtitle: { fontSize: 18, color: '#94a3b8', textAlign: 'center' },
