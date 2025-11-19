@@ -142,6 +142,7 @@ export default function LoginPage() {
       }
 
       console.log('✅ Auth successful, waiting for navigation...');
+      setLoading(false);
 
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
