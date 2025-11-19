@@ -1,302 +1,115 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePet } from '../../contexts/PetContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { getPetConfig } from '../../utils/pet/petConfig';
-import { getMoodAnimation, getMoodFilter } from '../../utils/pet/moodEngine';
 
 interface PetDisplayProps {
   size?: 'small' | 'medium' | 'large';
   showStats?: boolean;
   interactive?: boolean;
-  onPress?: () => void;
 }
 
 export default function PetDisplay({ 
   size = 'medium', 
-  showStats = true, 
-  interactive = true,
-  onPress 
+  showStats = false 
 }: PetDisplayProps) {
   const { petState } = usePet();
-  
-  const bounceAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const { colors } = useTheme();
 
-  useEffect(() => {
-    if (!petState) return;
-
-    const animation = getMoodAnimation(petState.moodState);
-
-    // Different animations based on mood
-    if (animation === 'bounce') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(bounceAnim, {
-            toValue: -20,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(bounceAnim, {
-            toValue: 0,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    } else if (animation === 'droop') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 0.95,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    } else if (animation === 'breathe') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.05,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    } else if (animation === 'jump') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(bounceAnim, {
-            toValue: -30,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(bounceAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    }
-
-    return () => {
-      bounceAnim.stopAnimation();
-      scaleAnim.stopAnimation();
-      rotateAnim.stopAnimation();
-    };
-  }, [petState?.moodState]);
-
-  if (!petState) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.loading}>Loading pet...</Text>
-      </View>
-    );
-  }
+  if (!petState) return null;
 
   const petConfig = getPetConfig(petState.currentPet);
-  const filter = getMoodFilter(petState.moodState);
-  
+
   const sizeStyles = {
-    small: { fontSize: 60, containerSize: 120 },
-    medium: { fontSize: 100, containerSize: 180 },
-    large: { fontSize: 140, containerSize: 240 },
+    small: { container: 80, emoji: 40, badge: 16 },
+    medium: { container: 120, emoji: 60, badge: 20 },
+    large: { container: 180, emoji: 90, badge: 24 },
   };
 
   const currentSize = sizeStyles[size];
 
+  const getMoodEmoji = () => {
+    if (petState.mood === 'happy') return '😊';
+    if (petState.mood === 'sad') return '😢';
+    if (petState.mood === 'angry') return '😠';
+    return '😐';
+  };
+
+  const getHappinessColor = () => {
+    if (petState.happiness >= 80) return '#4CAF50';
+    if (petState.happiness >= 50) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  const getEnergyColor = () => {
+    if (petState.energy >= 80) return '#00D4A1';
+    if (petState.energy >= 50) return '#f59e0b';
+    return '#ef4444';
+  };
+
   return (
-    <TouchableOpacity 
-      activeOpacity={interactive ? 0.8 : 1} 
-      onPress={onPress}
-      disabled={!interactive}
-    >
-      <View style={[styles.container, { width: currentSize.containerSize, height: currentSize.containerSize }]}>
-        <LinearGradient
-          colors={['#00D4A1', '#4CAF50']}
-          style={[styles.petCircle, { width: currentSize.containerSize, height: currentSize.containerSize }]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Animated.View
-            style={{
-              transform: [
-                { translateY: bounceAnim },
-                { scale: scaleAnim },
-              ],
-            }}
-          >
-            <Text 
-              style={[
-                styles.petEmoji, 
-                { fontSize: currentSize.fontSize },
-                petState.moodState === 'sad' && styles.sadFilter,
-                petState.moodState === 'sleeping' && styles.sleepingFilter,
-              ]}
-            >
-              {petConfig.emoji}
-            </Text>
-          </Animated.View>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#00D4A1', '#4CAF50']}
+        style={[styles.petCircle, { width: currentSize.container, height: currentSize.container }]}
+      >
+        <Text style={[styles.petEmoji, { fontSize: currentSize.emoji }]}>{petConfig.emoji}</Text>
+        <View style={[styles.moodBadge, { width: currentSize.badge * 1.5, height: currentSize.badge * 1.5 }]}>
+          <Text style={{ fontSize: currentSize.badge }}>{getMoodEmoji()}</Text>
+        </View>
+        <View style={[styles.levelBadge, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.levelText, { color: colors.text }]}>Lv.{petState.petLevel}</Text>
+        </View>
+      </LinearGradient>
 
-          {/* Mood indicator */}
-          <View style={styles.moodIndicator}>
-            <Text style={styles.moodEmoji}>
-              {petState.moodState === 'happy' && '😊'}
-              {petState.moodState === 'neutral' && '😐'}
-              {petState.moodState === 'sad' && '😢'}
-              {petState.moodState === 'sleeping' && '😴'}
-              {petState.moodState === 'excited' && '🤩'}
-            </Text>
-          </View>
+      <Text style={[styles.petName, { color: colors.text }]}>{petConfig.name}</Text>
+      <Text style={[styles.petPersonality, { color: colors.textSecondary }]}>{petConfig.personality}</Text>
 
-          {/* Level badge */}
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>Lv.{petState.petLevel}</Text>
-          </View>
-        </LinearGradient>
-
-        {/* Pet name */}
-        <Text style={styles.petName}>{petConfig.name}</Text>
-        <Text style={styles.petPersonality}>{petConfig.personality}</Text>
-
-        {/* Stats bars */}
-        {showStats && (
-          <View style={styles.statsContainer}>
-            {/* Happiness bar */}
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>💝 Happiness</Text>
-              <View style={styles.statBarContainer}>
-                <View style={[styles.statBar, { width: `${petState.happiness}%`, backgroundColor: '#ec4899' }]} />
+      {showStats && (
+        <View style={styles.statsContainer}>
+          <View style={styles.statRow}>
+            <Text style={styles.statIcon}>😊</Text>
+            <View style={styles.statInfo}>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Happiness</Text>
+              <View style={[styles.statBarContainer, { backgroundColor: colors.border }]}>
+                <View style={[styles.statBar, { width: `${petState.happiness}%`, backgroundColor: getHappinessColor() }]} />
               </View>
-              <Text style={styles.statValue}>{petState.happiness}%</Text>
             </View>
-
-            {/* Energy bar */}
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>⚡ Energy</Text>
-              <View style={styles.statBarContainer}>
-                <View style={[styles.statBar, { width: `${petState.energy}%`, backgroundColor: '#f59e0b' }]} />
-              </View>
-              <Text style={styles.statValue}>{petState.energy}%</Text>
-            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>{petState.happiness}%</Text>
           </View>
-        )}
-      </View>
-    </TouchableOpacity>
+          <View style={styles.statRow}>
+            <Text style={styles.statIcon}>⚡</Text>
+            <View style={styles.statInfo}>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Energy</Text>
+              <View style={[styles.statBarContainer, { backgroundColor: colors.border }]}>
+                <View style={[styles.statBar, { width: `${petState.energy}%`, backgroundColor: getEnergyColor() }]} />
+              </View>
+            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>{petState.energy}%</Text>
+          </View>
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loading: {
-    color: '#94a3b8',
-    fontSize: 16,
-  },
-  petCircle: {
-    borderRadius: 999,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
-    position: 'relative',
-  },
-  petEmoji: {
-    textAlign: 'center',
-  },
-  sadFilter: {
-    opacity: 0.7,
-  },
-  sleepingFilter: {
-    opacity: 0.6,
-  },
-  moodIndicator: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moodEmoji: {
-    fontSize: 20,
-  },
-  levelBadge: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  levelText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  petName: {
-    marginTop: 16,
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  petPersonality: {
-    fontSize: 14,
-    color: '#94a3b8',
-    marginTop: 4,
-  },
-  statsContainer: {
-    marginTop: 20,
-    width: '100%',
-    gap: 12,
-  },
-  statRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#fff',
-    width: 100,
-  },
-  statBarContainer: {
-    flex: 1,
-    height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  statBar: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  statValue: {
-    fontSize: 12,
-    color: '#94a3b8',
-    width: 40,
-    textAlign: 'right',
-  },
+  container: { alignItems: 'center' },
+  petCircle: { borderRadius: 999, justifyContent: 'center', alignItems: 'center', shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
+  petEmoji: { fontWeight: 'bold' },
+  moodBadge: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 999, justifyContent: 'center', alignItems: 'center' },
+  levelBadge: { position: 'absolute', bottom: 8, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  levelText: { fontSize: 12, fontWeight: 'bold' },
+  petName: { fontSize: 24, fontWeight: 'bold', marginTop: 16 },
+  petPersonality: { fontSize: 14, marginTop: 4 },
+  statsContainer: { width: '100%', marginTop: 24, gap: 16 },
+  statRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  statIcon: { fontSize: 24 },
+  statInfo: { flex: 1 },
+  statLabel: { fontSize: 12, marginBottom: 6, fontWeight: '600' },
+  statBarContainer: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  statBar: { height: '100%', borderRadius: 4 },
+  statValue: { fontSize: 14, fontWeight: 'bold', minWidth: 45, textAlign: 'right' },
 });

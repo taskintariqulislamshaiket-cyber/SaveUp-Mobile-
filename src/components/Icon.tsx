@@ -9,55 +9,46 @@ interface IconProps {
   style?: any;
 }
 
-// Emoji fallbacks - GUARANTEED to work everywhere
 const EMOJI_ICONS: Record<string, string> = {
-  'paw': '🐾',
   'home': '🏠',
   'receipt': '🧾',
   'trophy': '🏆',
   'bulb': '💡',
+  'stats-chart': '📊',
   'person': '👤',
+  'paw': '🐾',
   'add': '➕',
   'close': '✕',
-  'close-circle': '❌',
-  'arrow-forward': '→',
-  'checkmark': '✓',
-  'checkmark-circle': '✅',
+  'cash': '💵',
+  'wallet': '💳',
+  'calendar': '📅',
+  'trending-up': '📈',
+  'lock-closed': '🔒',
+  'card': '💳',
+  'shield-checkmark': '🛡️',
+  'log-out': '🚪',
+  'information-circle': 'ℹ️',
+  'star': '⭐',
+  'swap-horizontal': '🔄',
   'fast-food': '🍔',
   'car': '🚗',
   'cart': '🛒',
-  'game-controller': '🎮',
+  'game-controller': '��',
   'fitness': '💪',
   'ellipsis-horizontal': '⋯',
-  'wallet': '💰',
-  'cash': '💵',
-  'create': '✏️',
-  'trash-outline': '🗑️',
-  'mail': '📧',
-  'lock-closed': '🔒',
-  'eye': '👁️',
-  'eye-off': '🙈',
-  'logo-google': '🔵',
+  'trash': '🗑️',
   'alert-circle': '⚠️',
-  'flash': '⚡',
-  'warning': '⚠️',
-  'chatbubbles': '💬',
-  'rocket': '🚀',
-  'sad-outline': '😢',
+  'arrow-forward': '→',
 };
 
-export default function Icon({ name, size = 24, color = '#fff', style }: IconProps) {
-  // Mobile: Use Ionicons
-  if (Platform.OS !== 'web') {
-    return <Ionicons name={name as any} size={size} color={color} style={style} />;
+export default function Icon({ name, size = 24, color = '#000', style }: IconProps) {
+  if (EMOJI_ICONS[name]) {
+    return (
+      <Text style={[{ fontSize: size, color }, style]}>
+        {EMOJI_ICONS[name]}
+      </Text>
+    );
   }
 
-  // Web: Use emoji (ALWAYS works)
-  const emoji = EMOJI_ICONS[name] || '•';
-  
-  return (
-    <View style={[{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }, style]}>
-      <Text style={{ fontSize: size * 0.8, lineHeight: size }}>{emoji}</Text>
-    </View>
-  );
+  return <Ionicons name={name as any} size={size} color={color} style={style} />;
 }
