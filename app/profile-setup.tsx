@@ -1,3 +1,4 @@
+import WalletIcon from '../src/components/WalletIcon';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -177,7 +178,7 @@ export default function ProfileSetup() {
                 colors={['#00D4A1', '#4CAF50']}
                 style={styles.iconGradient}
               >
-                <Text style={styles.walletEmoji}>💰</Text>
+                <WalletIcon size={80} />
               </LinearGradient>
             </Animated.View>
             <Text style={styles.title}>Let's Set You Up! 🚀</Text>
