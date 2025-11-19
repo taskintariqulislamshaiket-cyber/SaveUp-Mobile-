@@ -224,7 +224,7 @@ export default function LoginPage() {
               end={{ x: 1, y: 1 }}
               style={styles.logoGradient}
             >
-              <Text style={styles.walletEmoji}>💰</Text>
+              <WalletIcon size={60} />
             </LinearGradient>
           </Animated.View>
 

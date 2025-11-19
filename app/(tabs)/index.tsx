@@ -231,7 +231,7 @@ export default function Dashboard() {
           <View style={styles.logoContainer}>
             <Animated.View style={{ transform: [{ rotate: logoSpin }] }}>
               <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.logoCircle}>
-                <Text style={styles.logoEmoji}>💰</Text>
+                <WalletIcon size={50} />
               </LinearGradient>
             </Animated.View>
             <View>
@@ -258,7 +258,7 @@ export default function Dashboard() {
         <View style={styles.statsGrid}>
           <View style={styles.statRow}>
             <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.statCard}>
-              <Text style={styles.statEmoji}>💰</Text>
+              <WalletIcon size={40} />
               <Text style={styles.statLabel}>{currentMonth.toUpperCase()}{'\n'}BUDGET</Text>
               <Text style={styles.statValue}>৳{(monthlyIncome ?? 0).toLocaleString('en-BD')}</Text>
               <Text style={styles.statHint}>Keep it rolling!</Text>
