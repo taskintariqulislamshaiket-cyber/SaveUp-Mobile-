@@ -33,58 +33,6 @@ const QUESTIONS = [
   },
   {
     id: 2,
-    title: "Debt Philosophy",
-    question: "How do you feel about debt?",
-    options: [
-      { text: "Avoid it at all costs", value: "guardian" },
-      { text: "Strategic debt is okay", value: "strategist" },
-      { text: "Necessary evil", value: "realist" },
-      { text: "Not ideal but happens", value: "enjoyer" },
-      { text: "Worth it for family", value: "giver" },
-      { text: "Plan to pay off ASAP", value: "planner" },
-    ],
-  },
-  {
-    id: 3,
-    title: "Friend Borrows Money",
-    question: "Your friend asks to borrow money. You:",
-    options: [
-      { text: "Lend only what I can afford to lose", value: "guardian" },
-      { text: "Ask for a written agreement", value: "strategist" },
-      { text: "Lend if they really need it", value: "realist" },
-      { text: "Lend freely", value: "enjoyer" },
-      { text: "Give without expecting back", value: "giver" },
-      { text: "Check my budget first", value: "planner" },
-    ],
-  },
-  {
-    id: 4,
-    title: "Unexpected Windfall",
-    question: "You found ৳10,000 extra this month. You:",
-    options: [
-      { text: "Save it all", value: "guardian" },
-      { text: "Invest half, save half", value: "strategist" },
-      { text: "Pay off pending bills", value: "realist" },
-      { text: "Splurge on something fun", value: "enjoyer" },
-      { text: "Share with family", value: "giver" },
-      { text: "Add to emergency fund", value: "planner" },
-    ],
-  },
-  {
-    id: 5,
-    title: "Budgeting Style",
-    question: "Your approach to budgeting:",
-    options: [
-      { text: "Strict, every taka tracked", value: "guardian" },
-      { text: "Optimize for maximum returns", value: "strategist" },
-      { text: "Basics covered, rest flexible", value: "realist" },
-      { text: "Loose budget, enjoy life", value: "enjoyer" },
-      { text: "Family needs come first", value: "giver" },
-      { text: "Detailed monthly plan", value: "planner" },
-    ],
-  },
-  {
-    id: 6,
     title: "Shopping Behavior",
     question: "When shopping, you:",
     options: [
@@ -97,7 +45,7 @@ const QUESTIONS = [
     ],
   },
   {
-    id: 7,
+    id: 3,
     title: "Financial Goals",
     question: "Your biggest financial goal is:",
     options: [
@@ -110,20 +58,7 @@ const QUESTIONS = [
     ],
   },
   {
-    id: 8,
-    title: "Risk Tolerance",
-    question: "When it comes to financial risks:",
-    options: [
-      { text: "Play it very safe", value: "guardian" },
-      { text: "Calculate risks carefully", value: "strategist" },
-      { text: "Take moderate risks", value: "realist" },
-      { text: "YOLO - take chances", value: "enjoyer" },
-      { text: "Risk for family security", value: "giver" },
-      { text: "Risk within planned limits", value: "planner" },
-    ],
-  },
-  {
-    id: 9,
+    id: 4,
     title: "Money Stress",
     question: "When money gets tight:",
     options: [
@@ -136,7 +71,7 @@ const QUESTIONS = [
     ],
   },
   {
-    id: 10,
+    id: 5,
     title: "Future Vision",
     question: "In 5 years, you want to:",
     options: [
@@ -191,6 +126,7 @@ export default function Quiz() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [personalityType, setPersonalityType] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -210,31 +146,31 @@ export default function Quiz() {
     ]).start();
   }, [currentQuestion]);
 
-  const handleOptionSelect = (value: string) => {
+  const handleOptionSelect = async (value: string) => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
     setSelectedOption(value);
+    
     if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  };
-
-  const handleNext = async () => {
-    if (!selectedOption) return;
-
-    const newAnswers = [...answers, selectedOption];
-    setAnswers(newAnswers);
-
-    if (currentQuestion < QUESTIONS.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setSelectedOption(null);
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-    } else {
-      await calculatePersonality(newAnswers);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+    // Auto-advance after 500ms
+    setTimeout(async () => {
+      const newAnswers = [...answers, value];
+      setAnswers(newAnswers);
+
+      if (currentQuestion < QUESTIONS.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+        setSelectedOption(null);
+        fadeAnim.setValue(0);
+        slideAnim.setValue(50);
+        setIsProcessing(false);
+      } else {
+        await calculatePersonality(newAnswers);
+      }
+    }, 500);
   };
 
   const calculatePersonality = async (finalAnswers: string[]) => {
@@ -258,14 +194,25 @@ export default function Quiz() {
     } catch (error) {
       console.error('Error saving personality:', error);
     }
+    setIsProcessing(false);
   };
 
   const handleFinish = () => {
-    router.replace('/(tabs)');
+    router.replace('/(tabs)/index');
   };
 
-  const handleSkip = () => {
-    router.replace('/(tabs)');
+  const handleSkip = async () => {
+    try {
+      if (user) {
+        await setDoc(doc(db, 'users', user.uid), {
+          quizCompleted: true,
+          moneyPersonality: 'skipped',
+        }, { merge: true });
+      }
+    } catch (error) {
+      console.error('Error skipping quiz:', error);
+    }
+    router.replace('/(tabs)/index');
   };
 
   if (showResult) {
@@ -301,7 +248,7 @@ export default function Quiz() {
   return (
     <LinearGradient colors={['#0f172a', '#1e1b4b', '#1e293b']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip} disabled={isProcessing}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
 
@@ -335,6 +282,7 @@ export default function Quiz() {
                 ]}
                 onPress={() => handleOptionSelect(option.value)}
                 activeOpacity={0.8}
+                disabled={isProcessing}
               >
                 <Text style={[
                   styles.optionText,
@@ -350,23 +298,6 @@ export default function Quiz() {
               </TouchableOpacity>
             ))}
           </View>
-
-          <TouchableOpacity
-            style={[styles.nextButton, !selectedOption && styles.nextButtonDisabled]}
-            onPress={handleNext}
-            disabled={!selectedOption}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={selectedOption ? ['#00D4A1', '#4CAF50'] : ['#334155', '#475569']}
-              style={styles.nextGradient}
-            >
-              <Text style={styles.nextText}>
-                {currentQuestion < QUESTIONS.length - 1 ? 'Next' : 'Finish'}
-              </Text>
-              <Icon name="arrow-forward" size={20} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
         </Animated.View>
       </ScrollView>
     </LinearGradient>
@@ -393,10 +324,6 @@ const styles = StyleSheet.create({
   optionTextSelected: { color: '#fff', fontWeight: '600' },
   checkmark: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#00D4A1', justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
   checkmarkText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  nextButton: { marginTop: 'auto', borderRadius: 16, overflow: 'hidden' },
-  nextButtonDisabled: { opacity: 0.5 },
-  nextGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 18, gap: 8 },
-  nextText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   resultContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   resultTitle: { fontSize: 18, color: '#94a3b8', marginBottom: 16 },
   personalityTitle: { fontSize: 36, fontWeight: 'bold', color: '#00D4A1', marginBottom: 16, textAlign: 'center' },
