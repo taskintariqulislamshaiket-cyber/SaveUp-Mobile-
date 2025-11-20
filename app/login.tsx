@@ -42,13 +42,6 @@ export default function LoginPage() {
   // Navigate when user logs in
   useEffect(() => {
     if (user && !loading) {
-      console.log('🚀 User detected in login page, navigating...');
-      
-      // Wait a bit for profile to load
-      setTimeout(() => {
-        if (!userProfile?.profileComplete) {
-          console.log('→ Going to profile-setup');
-          router.replace('/profile-setup');
         } else if (!userProfile?.moneyPersonality && !userProfile?.quizCompleted) {
           console.log('→ Going to quiz');
           router.replace('/quiz');
