@@ -58,16 +58,6 @@ const PERSONALITY_TYPES = {
     title: "The Enjoyer",
     emoji: "🦄",
     description: "Life is too short! Money means experiences, not just savings.",
-  // Check profile completion on mount
-  useEffect(() => {
-    if (user && userProfile) {
-      if (!userProfile.profileComplete) {
-        router.replace("/profile-setup");
-      } else if (!userProfile.moneyPersonality && !userProfile.quizCompleted) {
-        router.replace("/quiz");
-      }
-    }
-  }, [user, userProfile]);
 
     tip: "Balance is key. Enjoy today, but plan for tomorrow too!",
     gradient: ['#ec4899', '#f43f5e'],
@@ -128,6 +118,17 @@ export default function Dashboard() {
     if (!user) return;
 
     try {
+
+  // Check profile completion on mount
+  useEffect(() => {
+    if (user && userProfile) {
+      if (!userProfile.profileComplete) {
+        router.replace("/profile-setup");
+      } else if (!userProfile.moneyPersonality && !userProfile.quizCompleted) {
+        router.replace("/quiz");
+      }
+    }
+  }, [user, userProfile]);
       const expensesQuery = query(
         collection(db, 'expenses'),
         where('userId', '==', user.uid),
