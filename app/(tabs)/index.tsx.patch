@@ -1,0 +1,10 @@
+Line 87: Change to: useEffect(() => {
+Line 88-102: Keep animations
+Line 103: Add: }, [user]);
+
+Line 123-131: DELETE THIS ENTIRE USEEFFECT (profile check belongs in _layout only)
+
+Line 115: Add null check:
+  const loadData = async () => {
+    if (!user) return;
+    ...

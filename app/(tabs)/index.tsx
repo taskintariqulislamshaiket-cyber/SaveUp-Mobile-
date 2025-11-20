@@ -116,18 +116,6 @@ export default function Dashboard() {
 
   const loadData = async () => {
     if (!user) return;
-
-    try {
-
-  // Check profile completion on mount
-  useEffect(() => {
-    if (user && userProfile) {
-      if (!userProfile.profileComplete) {
-        router.replace("/profile-setup");
-      } else if (!userProfile.moneyPersonality && !userProfile.quizCompleted) {
-        router.replace("/quiz");
-      }
-    }
   }, [user, userProfile]);
       const expensesQuery = query(
         collection(db, 'expenses'),
