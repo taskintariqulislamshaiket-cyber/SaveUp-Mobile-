@@ -198,7 +198,7 @@ export default function Quiz() {
   };
 
   const handleFinish = () => {
-    router.replace('/(tabs)/index');
+    router.replace('/(tabs)');
   };
 
   const handleSkip = async () => {
@@ -212,7 +212,7 @@ export default function Quiz() {
     } catch (error) {
       console.error('Error skipping quiz:', error);
     }
-    router.replace('/(tabs)/index');
+    router.replace('/(tabs)');
   };
 
   if (showResult) {
