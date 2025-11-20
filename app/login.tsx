@@ -122,6 +122,9 @@ export default function LoginPage() {
       }
 
       console.log('✅ Auth successful, waiting for navigation...');
+      
+      // Navigate to tabs (let home tab handle profile/quiz checks)
+      router.replace('/(tabs)');
       setLoading(false);
 
       if (Platform.OS !== 'web') {
