@@ -39,19 +39,6 @@ export default function LoginPage() {
   const logoRotate = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // Navigate when user logs in
-  useEffect(() => {
-    if (user && !loading) {
-        } else if (!userProfile?.moneyPersonality && !userProfile?.quizCompleted) {
-          console.log('→ Going to quiz');
-          router.replace('/quiz');
-        } else {
-          console.log('→ Going to dashboard');
-          router.replace('/(tabs)');
-        }
-      }, 500);
-    }
-  }, [user, userProfile, loading]);
 
   useEffect(() => {
     Animated.parallel([
