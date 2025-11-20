@@ -116,6 +116,8 @@ export default function Dashboard() {
 
   const loadData = async () => {
     if (!user) return;
+    try {
+    try {
       const expensesQuery = query(
         collection(db, 'expenses'),
         where('userId', '==', user.uid),
