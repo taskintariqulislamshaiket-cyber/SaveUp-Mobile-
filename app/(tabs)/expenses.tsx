@@ -172,11 +172,6 @@ export default function ExpensesScreen() {
       }
     }
   };
-    } catch (error) {
-      console.error('Error adding expense:', error);
-      Alert.alert('Error', 'Failed to add expense');
-    }
-  };
 
   const handleDeleteExpense = async (id: string) => {
     console.log("Delete clicked for ID:", id);
@@ -320,7 +315,7 @@ export default function ExpensesScreen() {
                   <Icon name="trash" size={18} color="#ef4444" />
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         )}
         <View style={{ height: 100 }} />
