@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Icon from '../../src/components/Icon';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../../src/config/firebase-config';
 import * as Haptics from 'expo-haptics';
 import { usePet } from '../../src/contexts/PetContext';
@@ -25,12 +25,21 @@ import GemCounter from '../../src/components/pet/GemCounter';
 import GemRewardToast from '../../src/components/pet/GemRewardToast';
 
 const CATEGORIES = [
-  { name: 'Food', icon: 'fast-food', color: '#f59e0b' },
+  { name: 'Groceries', icon: 'basket', color: '#10b981' },
+  { name: 'Restaurant', icon: 'restaurant', color: '#f59e0b' },
   { name: 'Transport', icon: 'car', color: '#3b82f6' },
+  { name: 'Fuel', icon: 'speedometer', color: '#0891b2' },
   { name: 'Shopping', icon: 'cart', color: '#ec4899' },
   { name: 'Entertainment', icon: 'game-controller', color: '#8b5cf6' },
-  { name: 'Bills', icon: 'receipt', color: '#ef4444' },
-  { name: 'Health', icon: 'fitness', color: '#10b981' },
+  { name: 'Utilities', icon: 'flash', color: '#f97316' },
+  { name: 'Mobile/Internet', icon: 'phone-portrait', color: '#06b6d4' },
+  { name: 'Rent', icon: 'home', color: '#ef4444' },
+  { name: 'Education', icon: 'school', color: '#6366f1' },
+  { name: 'Medical', icon: 'medical', color: '#14b8a6' },
+  { name: 'Family', icon: 'people', color: '#f43f5e' },
+  { name: 'Clothing', icon: 'shirt', color: '#a855f7' },
+  { name: 'Personal Care', icon: 'cut', color: '#84cc16' },
+  { name: 'Gifts', icon: 'gift', color: '#fb923c' },
   { name: 'Other', icon: 'ellipsis-horizontal', color: '#64748b' },
 ];
 
@@ -47,6 +56,7 @@ export default function ExpensesScreen() {
   const [selectedCategory, setSelectedCategory] = useState('Food');
   const [showGemReward, setShowGemReward] = useState(false);
   const [gemsEarned, setGemsEarned] = useState(0);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -92,8 +102,10 @@ export default function ExpensesScreen() {
 
   const handleAddExpense = async () => {
     if (!amount || !description) {
-      Alert.alert('Missing Info', 'Please fill in amount and description');
-      if (Platform.OS !== 'web') {
+      if (Platform.OS === 'web') {
+        alert('Please fill in amount and description');
+      } else {
+        Alert.alert('Missing Info', 'Please fill in amount and description');
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
       return;
@@ -105,37 +117,61 @@ export default function ExpensesScreen() {
       }
 
       const expenseAmount = parseFloat(amount);
-      
-      await addDoc(collection(db, 'expenses'), {
-        userId: user?.uid,
-        amount: expenseAmount,
-        description,
-        category: selectedCategory,
-        date: new Date(),
-        createdAt: new Date(),
-      });
 
-      // Pet rewards with visual feedback
-      try {
-        const gemReward = await earnGems('TRACK_EXPENSE');
-        await addXP(calculateXPEarned(expenseAmount));
-        
-        // Show gem reward toast
-        setGemsEarned(gemReward || 5);
-        setShowGemReward(true);
-      } catch (e) {
-        console.error('Pet reward error:', e);
+      if (editingExpense) {
+        // UPDATE existing expense
+        console.log("Updating expense:", editingExpense.id);
+        await updateDoc(doc(db, 'expenses', editingExpense.id), {
+          amount: expenseAmount,
+          description,
+          category: selectedCategory,
+          updatedAt: new Date(),
+        });
+      } else {
+        // CREATE new expense
+        console.log("Creating new expense");
+        await addDoc(collection(db, 'expenses'), {
+          userId: user?.uid,
+          amount: expenseAmount,
+          description,
+          category: selectedCategory,
+          date: new Date(),
+          createdAt: new Date(),
+        });
+
+        // Pet rewards ONLY for new expenses (not edits)
+        try {
+          const gemReward = await earnGems('TRACK_EXPENSE');
+          await addXP(calculateXPEarned(expenseAmount));
+          
+          // Show gem reward toast
+          setGemsEarned(gemReward || 5);
+          setShowGemReward(true);
+        } catch (e) {
+          console.error('Pet reward error:', e);
+        }
       }
 
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
+      // Clear form and close modal
       setModalVisible(false);
       setAmount('');
       setDescription('');
-      setSelectedCategory('Food');
+      setSelectedCategory('Groceries');
+      setEditingExpense(null);
       loadExpenses();
+    } catch (error) {
+      console.error('Error saving expense:', error);
+      if (Platform.OS === 'web') {
+        alert('Failed to save expense');
+      } else {
+        Alert.alert('Error', 'Failed to save expense');
+      }
+    }
+  };
     } catch (error) {
       console.error('Error adding expense:', error);
       Alert.alert('Error', 'Failed to add expense');
@@ -183,6 +219,15 @@ export default function ExpensesScreen() {
         ]
       );
     }
+  };
+
+  const handleEditExpense = (expense: any) => {
+    console.log("Editing expense:", expense);
+    setEditingExpense(expense);
+    setAmount(expense.amount.toString());
+    setDescription(expense.description);
+    setSelectedCategory(expense.category);
+    setModalVisible(true);
   };
   const getTotalExpenses = () => {
     return expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
@@ -243,7 +288,7 @@ export default function ExpensesScreen() {
           </View>
         ) : (
           expenses.map(expense => (
-            <View key={expense.id} style={[styles.expenseCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity key={expense.id} onPress={() => handleEditExpense(expense)} style={[styles.expenseCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.expenseLeft}>
                 <View style={[styles.categoryIcon, { backgroundColor: CATEGORIES.find(c => c.name === expense.category)?.color || '#64748b' }]}>
                   <Icon
@@ -285,6 +330,10 @@ export default function ExpensesScreen() {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => {
+          setEditingExpense(null);
+          setAmount("");
+          setDescription("");
+          setSelectedCategory("Groceries");
           setModalVisible(true);
           if (Platform.OS !== 'web') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -314,8 +363,8 @@ export default function ExpensesScreen() {
           />
           <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Add Expense</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{editingExpense ? "Edit Expense" : "Add Expense"}</Text>
+              <TouchableOpacity onPress={() => { setModalVisible(false); setEditingExpense(null); setAmount(""); setDescription(""); setSelectedCategory("Groceries"); }}>
                 <Icon name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
@@ -375,7 +424,7 @@ export default function ExpensesScreen() {
               onPress={handleAddExpense}
             >
               <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.addButtonGradient}>
-                <Text style={styles.addButtonText}>Add Expense</Text>
+                <Text style={styles.addButtonText}>{editingExpense ? "Update Expense" : "Add Expense"}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
