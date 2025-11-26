@@ -143,31 +143,47 @@ export default function ExpensesScreen() {
   };
 
   const handleDeleteExpense = async (id: string) => {
-    Alert.alert(
-      'Delete Expense',
-      'Are you sure you want to delete this expense?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteDoc(doc(db, 'expenses', id));
-              if (Platform.OS !== 'web') {
+    console.log("Delete clicked for ID:", id);
+    
+    // Web uses window.confirm, mobile uses Alert
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to delete this expense?');
+      if (!confirmed) return;
+      
+      try {
+        await deleteDoc(doc(db, 'expenses', id));
+        console.log("Expense deleted successfully:", id);
+        loadExpenses();
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+        alert('Failed to delete expense. Please try again.');
+      }
+    } else {
+      // Mobile
+      Alert.alert(
+        'Delete Expense',
+        'Are you sure you want to delete this expense?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteDoc(doc(db, 'expenses', id));
                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                console.log("Expense deleted successfully:", id);
+                loadExpenses();
+              } catch (error) {
+                console.error('Error deleting expense:', error);
+                Alert.alert('Error', 'Failed to delete expense');
               }
-              loadExpenses();
-            } catch (error) {
-              console.error('Error deleting expense:', error);
-              Alert.alert('Error', 'Failed to delete expense');
-            }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
-
   const getTotalExpenses = () => {
     return expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
   };
