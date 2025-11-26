@@ -22,6 +22,7 @@ import * as Haptics from 'expo-haptics';
 import { usePet } from '../../src/contexts/PetContext';
 import { calculateXPEarned } from '../../src/utils/pet/gemCalculator';
 import GemCounter from '../../src/components/pet/GemCounter';
+import GemRewardToast from '../../src/components/pet/GemRewardToast';
 
 const CATEGORIES = [
   { name: 'Food', icon: 'fast-food', color: '#f59e0b' },
@@ -44,13 +45,15 @@ export default function ExpensesScreen() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Food');
+  const [showGemReward, setShowGemReward] = useState(false);
+  const [gemsEarned, setGemsEarned] = useState(0);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     loadExpenses();
-
+    
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -59,29 +62,26 @@ export default function ExpensesScreen() {
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 600,
+        duration: 500,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [user]);
+  }, []);
 
   const loadExpenses = async () => {
     if (!user) return;
-
     try {
       const q = query(
         collection(db, 'expenses'),
         where('userId', '==', user.uid),
         orderBy('date', 'desc')
       );
-
-      const querySnapshot = await getDocs(q);
-      const expensesData = querySnapshot.docs.map(doc => ({
+      const snapshot = await getDocs(q);
+      const expensesData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         date: doc.data().date?.toDate?.() || new Date(),
       }));
-
       setExpenses(expensesData);
     } catch (error) {
       console.error('Error loading expenses:', error);
@@ -105,7 +105,7 @@ export default function ExpensesScreen() {
       }
 
       const expenseAmount = parseFloat(amount);
-
+      
       await addDoc(collection(db, 'expenses'), {
         userId: user?.uid,
         amount: expenseAmount,
@@ -115,11 +115,17 @@ export default function ExpensesScreen() {
         createdAt: new Date(),
       });
 
-      // Pet rewards (silent)
+      // Pet rewards with visual feedback
       try {
-        await earnGems('TRACK_EXPENSE');
+        const gemReward = await earnGems('TRACK_EXPENSE');
         await addXP(calculateXPEarned(expenseAmount));
-      } catch (e) { /* silent */ }
+        
+        // Show gem reward toast
+        setGemsEarned(gemReward || 5);
+        setShowGemReward(true);
+      } catch (e) {
+        console.error('Pet reward error:', e);
+      }
 
       if (Platform.OS !== 'web') {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -148,11 +154,10 @@ export default function ExpensesScreen() {
           onPress: async () => {
             try {
               await deleteDoc(doc(db, 'expenses', id));
-              loadExpenses();
-              
               if (Platform.OS !== 'web') {
                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               }
+              loadExpenses();
             } catch (error) {
               console.error('Error deleting expense:', error);
               Alert.alert('Error', 'Failed to delete expense');
@@ -164,233 +169,243 @@ export default function ExpensesScreen() {
   };
 
   const getTotalExpenses = () => {
-    return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    return expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
   };
 
-  const getTodayExpenses = () => {
-    const today = new Date().toDateString();
-    return expenses
-      .filter(e => new Date(e.date).toDateString() === today)
-      .reduce((sum, e) => sum + e.amount, 0);
+  const getThisMonthTotal = () => {
+    const now = new Date();
+    const thisMonth = expenses.filter(exp => {
+      const expDate = new Date(exp.date);
+      return expDate.getMonth() === now.getMonth() && 
+             expDate.getFullYear() === now.getFullYear();
+    });
+    return thisMonth.reduce((sum, exp) => sum + (exp.amount || 0), 0);
   };
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading expenses...</Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Expenses 💸</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Track every taka</Text>
-          </View>
-          <GemCounter size="small" />
-        </View>
+      {/* Gem Reward Toast */}
+      <GemRewardToast
+        visible={showGemReward}
+        amount={gemsEarned}
+        message="Great job tracking!"
+        onHide={() => setShowGemReward(false)}
+      />
 
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Today</Text>
-            <Text style={[styles.summaryAmount, { color: colors.text }]}>
-              ৳{getTodayExpenses().toLocaleString()}
+      {/* Header */}
+      <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <View>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Expenses</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            Track every taka
+          </Text>
+        </View>
+        <GemCounter size="small" />
+      </Animated.View>
+
+      {/* Stats Cards */}
+      <Animated.View style={[styles.statsContainer, { opacity: fadeAnim }]}>
+        <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.statCard}>
+          <Text style={styles.statLabel}>This Month</Text>
+          <Text style={styles.statValue}>৳{getThisMonthTotal().toLocaleString('en-BD')}</Text>
+        </LinearGradient>
+        <LinearGradient colors={['#ef4444', '#dc2626']} style={styles.statCard}>
+          <Text style={styles.statLabel}>All Time</Text>
+          <Text style={styles.statValue}>৳{getTotalExpenses().toLocaleString('en-BD')}</Text>
+        </LinearGradient>
+      </Animated.View>
+
+      {/* Expense List */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {expenses.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>💸</Text>
+            <Text style={[styles.emptyText, { color: colors.text }]}>No expenses yet</Text>
+            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+              Start tracking your spending!
             </Text>
           </View>
-          <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total</Text>
-            <Text style={[styles.summaryAmount, { color: colors.text }]}>
-              ৳{getTotalExpenses().toLocaleString()}
-            </Text>
-          </View>
-        </View>
-
-        {/* Expense List */}
-        <ScrollView style={styles.expensesList} showsVerticalScrollIndicator={false}>
-          {expenses.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📝</Text>
-              <Text style={[styles.emptyText, { color: colors.text }]}>No expenses yet</Text>
-              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                Start tracking your spending!
-              </Text>
-            </View>
-          ) : (
-            expenses.map((expense) => {
-              const category = CATEGORIES.find(c => c.name === expense.category) || CATEGORIES[6];
-              return (
-                <View key={expense.id} style={[styles.expenseCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <View style={[styles.expenseIcon, { backgroundColor: category.color + '20' }]}>
-                    <Icon name={category.icon} size={24} color={category.color} />
-                  </View>
-                  <View style={styles.expenseInfo}>
-                    <Text style={[styles.expenseDescription, { color: colors.text }]}>
-                      {expense.description}
-                    </Text>
-                    <Text style={styles.expenseCategory} numberOfLines={1}>
-                      {expense.category}
-                    </Text>
-                    <Text style={[styles.expenseDate, { color: colors.textSecondary }]}>
-                      {new Date(expense.date).toLocaleDateString('en-BD')}
-                    </Text>
-                  </View>
-                  <View style={styles.expenseRight}>
-                    <Text style={[styles.expenseAmount, { color: colors.text }]}>
-                      ৳{expense.amount.toLocaleString()}
-                    </Text>
-                    <TouchableOpacity onPress={() => handleDeleteExpense(expense.id)}>
-                      <Icon name="trash" size={20} color="#ef4444" />
-                    </TouchableOpacity>
-                  </View>
+        ) : (
+          expenses.map(expense => (
+            <View key={expense.id} style={[styles.expenseCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.expenseLeft}>
+                <View style={[styles.categoryIcon, { backgroundColor: CATEGORIES.find(c => c.name === expense.category)?.color || '#64748b' }]}>
+                  <Icon
+                    name={CATEGORIES.find(c => c.name === expense.category)?.icon || 'ellipsis-horizontal'}
+                    size={20}
+                    color="#fff"
+                  />
                 </View>
-              );
-            })
-          )}
-        </ScrollView>
-
-        {/* Add Button */}
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
-          activeOpacity={0.8}
-        >
-          <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.addButtonGradient}>
-            <Icon name="add" size={28} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* Add Expense Modal */}
-        <Modal
-          visible={modalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalOverlay}
-          >
-            <View style={styles.modalBackdrop} />
-            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>Add Expense</Text>
-                <TouchableOpacity onPress={() => setModalVisible(false)}>
-                  <Icon name="close" size={24} color={colors.text} />
+                <View style={styles.expenseInfo}>
+                  <Text style={[styles.expenseCategory, { color: colors.text }]}>{expense.category}</Text>
+                  <Text style={[styles.expenseDescription, { color: colors.textSecondary }]}>
+                    {expense.description}
+                  </Text>
+                  <Text style={[styles.expenseDate, { color: colors.textSecondary }]}>
+                    {new Date(expense.date).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.expenseRight}>
+                <Text style={styles.expenseAmount}>৳{expense.amount.toLocaleString('en-BD')}</Text>
+                <TouchableOpacity
+                  onPress={() => handleDeleteExpense(expense.id)}
+                  style={styles.deleteButton}
+                >
+                  <Icon name="trash" size={18} color="#ef4444" />
                 </TouchableOpacity>
               </View>
+            </View>
+          ))
+        )}
+        <View style={{ height: 100 }} />
+      </ScrollView>
 
-              <View style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Amount (৳)</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-                  placeholder="0"
-                  placeholderTextColor={colors.textSecondary}
-                  value={amount}
-                  onChangeText={setAmount}
-                  keyboardType="numeric"
-                />
-              </View>
+      {/* Add Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          setModalVisible(true);
+          if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+        }}
+      >
+        <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.fabGradient}>
+          <Icon name="add" size={32} color="#fff" />
+        </LinearGradient>
+      </TouchableOpacity>
 
-              <View style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Description</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-                  placeholder="e.g., Lunch at restaurant"
-                  placeholderTextColor={colors.textSecondary}
-                  value={description}
-                  onChangeText={setDescription}
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categories}>
-                  {CATEGORIES.map((cat) => (
-                    <TouchableOpacity
-                      key={cat.name}
-                      style={[
-                        styles.categoryChip,
-                        selectedCategory === cat.name && { backgroundColor: cat.color },
-                        { borderColor: cat.color }
-                      ]}
-                      onPress={() => setSelectedCategory(cat.name)}
-                    >
-                      <Icon name={cat.icon} size={20} color={selectedCategory === cat.name ? '#fff' : cat.color} />
-                      <Text style={[styles.categoryLabel, { color: selectedCategory === cat.name ? '#fff' : cat.color }]}>
-                        {cat.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
-              <TouchableOpacity style={styles.saveButton} onPress={handleAddExpense} activeOpacity={0.8}>
-                <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.saveButtonGradient}>
-                  <Text style={styles.saveButtonText}>Add Expense</Text>
-                </LinearGradient>
+      {/* Add Expense Modal */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setModalVisible(false)}
+          />
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Add Expense</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Icon name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
-        </Modal>
-      </Animated.View>
+
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+              placeholder="Amount (৳)"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+              value={amount}
+              onChangeText={setAmount}
+            />
+
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+              placeholder="Description"
+              placeholderTextColor={colors.textSecondary}
+              value={description}
+              onChangeText={setDescription}
+            />
+
+            <Text style={[styles.categoryLabel, { color: colors.text }]}>Category</Text>
+            <View style={styles.categoriesGrid}>
+              {CATEGORIES.map(cat => (
+                <TouchableOpacity
+                  key={cat.name}
+                  style={[
+                    styles.categoryChip,
+                    { backgroundColor: selectedCategory === cat.name ? cat.color : colors.surface, borderColor: colors.border },
+                  ]}
+                  onPress={() => {
+                    setSelectedCategory(cat.name);
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                  }}
+                >
+                  <Icon
+                    name={cat.icon}
+                    size={20}
+                    color={selectedCategory === cat.name ? '#fff' : colors.text}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      { color: selectedCategory === cat.name ? '#fff' : colors.text },
+                    ]}
+                  >
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleAddExpense}
+            >
+              <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.addButtonGradient}>
+                <Text style={styles.addButtonText}>Add Expense</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { fontSize: 16 },
-  content: { flex: 1, padding: 20, paddingTop: 60 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  headerTitle: { fontSize: 32, fontWeight: 'bold' },
-  headerSubtitle: { fontSize: 14, marginTop: 4 },
-  summaryContainer: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  summaryCard: { flex: 1, borderRadius: 16, padding: 16, borderWidth: 1 },
-  summaryLabel: { fontSize: 12, marginBottom: 8 },
-  summaryAmount: { fontSize: 24, fontWeight: 'bold' },
-  expensesList: { flex: 1, marginBottom: 80 },
-  emptyState: { alignItems: 'center', marginTop: 60 },
-  emptyEmoji: { fontSize: 64, marginBottom: 16 },
-  emptyText: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
-  emptySubtext: { fontSize: 14 },
-  expenseCard: { flexDirection: 'row', borderRadius: 16, padding: 16, marginBottom: 12, alignItems: 'center', borderWidth: 1 },
-  expenseIcon: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  header: { padding: 20, paddingTop: 60 },
+  headerTitle: { fontSize: 28, fontWeight: 'bold', marginBottom: 4 },
+  headerSubtitle: { fontSize: 14 },
+  statsContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginBottom: 20 },
+  statCard: { flex: 1, padding: 20, borderRadius: 16, alignItems: 'center' },
+  statLabel: { fontSize: 12, color: '#fff', opacity: 0.9, marginBottom: 8 },
+  statValue: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
+  scrollView: { flex: 1, paddingHorizontal: 20 },
+  expenseCard: { flexDirection: 'row', padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 2 },
+  expenseLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  categoryIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   expenseInfo: { flex: 1 },
-  expenseDescription: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
-  expenseCategory: { fontSize: 12, color: '#00D4A1', marginBottom: 2 },
+  expenseCategory: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  expenseDescription: { fontSize: 13, marginBottom: 4 },
   expenseDate: { fontSize: 11 },
-  expenseRight: { alignItems: 'flex-end', gap: 8 },
-  expenseAmount: { fontSize: 18, fontWeight: 'bold' },
-  addButton: { position: 'absolute', bottom: 20, right: 20, borderRadius: 999, overflow: 'hidden', shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
-  addButtonGradient: { width: 64, height: 64, justifyContent: 'center', alignItems: 'center' },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.7)' },
-  modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' },
+  expenseRight: { alignItems: 'flex-end', justifyContent: 'space-between' },
+  expenseAmount: { fontSize: 18, fontWeight: 'bold', color: '#ef4444', marginBottom: 8 },
+  deleteButton: { padding: 8 },
+  fab: { position: 'absolute', bottom: 30, right: 30, borderRadius: 30, shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
+  fabGradient: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { flex: 1, justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { fontSize: 24, fontWeight: 'bold' },
-  inputContainer: { marginBottom: 20 },
-  inputLabel: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  input: { borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 2 },
-  categories: { flexDirection: 'row' },
-  categoryChip: { borderRadius: 12, paddingVertical: 8, paddingHorizontal: 16, marginRight: 8, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 2 },
-  categoryLabel: { fontSize: 14, fontWeight: '600' },
-  saveButton: { marginTop: 8, borderRadius: 12, overflow: 'hidden' },
-  saveButtonGradient: { padding: 16, alignItems: 'center' },
-  saveButtonText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+  input: { borderWidth: 2, borderRadius: 12, padding: 16, fontSize: 16, marginBottom: 16 },
+  categoryLabel: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
+  categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 2 },
+  categoryChipText: { fontSize: 14, fontWeight: '600' },
+  addButton: { borderRadius: 16, overflow: 'hidden' },
+  addButtonGradient: { padding: 18, alignItems: 'center' },
+  addButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  emptyState: { alignItems: 'center', paddingVertical: 60 },
+  emptyEmoji: { fontSize: 64, marginBottom: 16 },
+  emptyText: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
+  emptyHint: { fontSize: 14 },
 });
