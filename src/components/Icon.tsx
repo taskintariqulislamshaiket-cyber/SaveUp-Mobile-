@@ -38,6 +38,18 @@ const EMOJI_ICONS: Record<string, string> = {
   'ellipsis-horizontal': '⋯',
   'trash': '🗑️',
   'alert-circle': '⚠️',
+  'basket-outline': '🧺',
+  'restaurant-outline': '🍽️',
+  'speedometer-outline': '⛽',
+  'flash-outline': '⚡',
+  'phone-portrait-outline': '📱',
+  'home-outline': '🏠',
+  'school-outline': '🎓',
+  'medical-outline': '🏥',
+  'people-outline': '👨‍👩‍👧',
+  'shirt-outline': '👔',
+  'cut-outline': '💇',
+  'gift-outline': '🎁',
   'arrow-forward': '→',
 };
 
