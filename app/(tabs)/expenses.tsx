@@ -349,7 +349,7 @@ export default function ExpensesScreen() {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalContainer}
+          style={[styles.modalContainer, { backgroundColor: colors.background === "#ffffff" || colors.background === "#f8f9fa" ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.8)" }]}
         >
           <TouchableOpacity
             style={styles.modalOverlay}
@@ -453,9 +453,9 @@ const styles = StyleSheet.create({
   deleteButton: { padding: 8 },
   fab: { position: 'absolute', bottom: 30, right: 30, borderRadius: 30, shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
   fabGradient: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center' },
-  modalContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' },
+  modalContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end' },
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, zIndex: 999, backgroundColor: '#1e293b' },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, zIndex: 999 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { fontSize: 24, fontWeight: 'bold' },
   input: { borderWidth: 2, borderRadius: 12, padding: 16, fontSize: 16, marginBottom: 16 },
