@@ -25,22 +25,23 @@ import GemCounter from '../../src/components/pet/GemCounter';
 import GemRewardToast from '../../src/components/pet/GemRewardToast';
 
 const CATEGORIES = [
-  { name: 'Groceries', icon: 'basket', color: '#10b981' },
-  { name: 'Restaurant', icon: 'restaurant', color: '#f59e0b' },
-  { name: 'Transport', icon: 'car', color: '#3b82f6' },
-  { name: 'Fuel', icon: 'speedometer', color: '#0891b2' },
-  { name: 'Shopping', icon: 'cart', color: '#ec4899' },
-  { name: 'Entertainment', icon: 'game-controller', color: '#8b5cf6' },
-  { name: 'Utilities', icon: 'flash', color: '#f97316' },
-  { name: 'Mobile/Internet', icon: 'phone-portrait', color: '#06b6d4' },
-  { name: 'Rent', icon: 'home', color: '#ef4444' },
-  { name: 'Education', icon: 'school', color: '#6366f1' },
-  { name: 'Medical', icon: 'medical', color: '#14b8a6' },
-  { name: 'Family', icon: 'people', color: '#f43f5e' },
-  { name: 'Clothing', icon: 'shirt', color: '#a855f7' },
-  { name: 'Personal Care', icon: 'cut', color: '#84cc16' },
-  { name: 'Gifts', icon: 'gift', color: '#fb923c' },
+  { name: 'Groceries', icon: 'basket-outline', color: '#10b981' },
+  { name: 'Restaurant', icon: 'restaurant-outline', color: '#f59e0b' },
+  { name: 'Transport', icon: 'car-outline', color: '#3b82f6' },
+  { name: 'Fuel', icon: 'speedometer-outline', color: '#0891b2' },
+  { name: 'Shopping', icon: 'cart-outline', color: '#ec4899' },
+  { name: 'Entertainment', icon: 'game-controller-outline', color: '#8b5cf6' },
+  { name: 'Utilities', icon: 'flash-outline', color: '#f97316' },
+  { name: 'Mobile/Internet', icon: 'phone-portrait-outline', color: '#06b6d4' },
+  { name: 'Rent', icon: 'home-outline', color: '#ef4444' },
+  { name: 'Education', icon: 'school-outline', color: '#6366f1' },
+  { name: 'Medical', icon: 'medical-outline', color: '#14b8a6' },
+  { name: 'Family', icon: 'people-outline', color: '#f43f5e' },
+  { name: 'Clothing', icon: 'shirt-outline', color: '#a855f7' },
+  { name: 'Personal Care', icon: 'cut-outline', color: '#84cc16' },
+  { name: 'Gifts', icon: 'gift-outline', color: '#fb923c' },
   { name: 'Other', icon: 'ellipsis-horizontal', color: '#64748b' },
+];
 ];
 
 export default function ExpensesScreen() {
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', bottom: 30, right: 30, borderRadius: 30, shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
   fabGradient: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center' },
   modalContainer: { flex: 1, justifyContent: 'flex-end' },
-  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)' },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.isDark ? 'rgba(0,0,0,0.95)' : 'rgba(0,0,0,0.5)' },
   modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, zIndex: 10 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { fontSize: 24, fontWeight: 'bold' },
