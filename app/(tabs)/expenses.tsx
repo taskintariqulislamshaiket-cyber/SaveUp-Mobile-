@@ -364,6 +364,7 @@ export default function ExpensesScreen() {
               </TouchableOpacity>
             </View>
 
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: '70vh' }}>
             <TextInput
               style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
               placeholder="Amount (৳)"
@@ -422,6 +423,7 @@ export default function ExpensesScreen() {
                 <Text style={styles.addButtonText}>{editingExpense ? "Update Expense" : "Add Expense"}</Text>
               </LinearGradient>
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -452,8 +454,8 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', bottom: 30, right: 30, borderRadius: 30, shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
   fabGradient: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center' },
   modalContainer: { flex: 1, justifyContent: 'flex-end' },
-  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)' },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%', zIndex: 10 },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)' },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, zIndex: 10 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { fontSize: 24, fontWeight: 'bold' },
   input: { borderWidth: 2, borderRadius: 12, padding: 16, fontSize: 16, marginBottom: 16 },
