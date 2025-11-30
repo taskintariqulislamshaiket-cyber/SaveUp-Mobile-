@@ -32,6 +32,7 @@ export default function ProfileSetup() {
   const [remainingBalance, setRemainingBalance] = useState('');
   const [salaryDay, setSalaryDay] = useState('');
   const [existingSavings, setExistingSavings] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedPet, setSelectedPet] = useState<PetType | null>(null);
   const [showPetModal, setShowPetModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,6 +87,13 @@ export default function ProfileSetup() {
       return;
     }
 
+    if (!phoneNumber || !phoneNumber.startsWith("+880")) {
+      setError("Please enter a valid Bangladeshi WhatsApp number starting with +880");
+      if (Platform.OS !== "web") {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      return;
+    }
     if (!selectedPet) {
       setError('Please choose your pet companion! 🐾');
       if (Platform.OS !== 'web') {
@@ -117,6 +125,7 @@ export default function ProfileSetup() {
           remainingBalanceCurrentMonth: parseFloat(remainingBalance),
           salaryDay: salaryDayNum,
           existingSavings: existingSavings ? parseFloat(existingSavings) : 0,
+          phoneNumber: phoneNumber,
           profileComplete: true,
           updatedAt: new Date(),
         });
@@ -254,6 +263,22 @@ export default function ProfileSetup() {
                   value={existingSavings}
                   onChangeText={setExistingSavings}
                   keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>📱 WhatsApp Number *</Text>
+              <Text style={styles.helper}>For WhatsApp bot sync (e.g., +8801712345678)</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="phone-portrait" size={22} color="#00D4A1" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="+8801712345678"
+                  placeholderTextColor="#64748b"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
                 />
               </View>
             </View>

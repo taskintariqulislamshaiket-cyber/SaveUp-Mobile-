@@ -15,6 +15,7 @@ export interface UserProfile {
   userId: string;
   email: string;
   displayName: string;
+  phoneNumber?: string;
   photoURL?: string;
   monthlyIncome?: number;
   remainingBalanceCurrentMonth?: number;
