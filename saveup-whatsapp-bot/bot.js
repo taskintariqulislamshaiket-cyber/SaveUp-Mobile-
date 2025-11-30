@@ -9,6 +9,27 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+
+// Helper: Get userId from phone number
+async function getUserIdFromPhone(phoneNumber) {
+  try {
+    const usersSnapshot = await db.collection('users')
+      .where('phoneNumber', '==', phoneNumber)
+      .limit(1)
+      .get();
+    
+    if (!usersSnapshot.empty) {
+      return usersSnapshot.docs[0].id; // Return the userId (document ID)
+    }
+    
+    // Fallback: use phone if user not found (for backward compatibility)
+    console.warn(`User not found for phone ${phoneNumber}, using phone as userId`);
+    return phoneNumber;
+  } catch (error) {
+    console.error('Error getting userId:', error);
+    return phoneNumber; // Fallback to phone
+  }
+}
 const conversationContext = new Map();
 
 const client = new Client({
@@ -370,7 +391,8 @@ async function handleMultiItemExpense(message, userPhone, parsed) {
     // Log each item separately
     for (const item of items) {
       await db.collection('expenses').add({
-        userId: userPhone,
+      const userId = await getUserIdFromPhone(userPhone);
+        userId: userId,
         amount: item.amount,
         description: item.description,
         category: 'Other',
@@ -391,8 +413,9 @@ async function handleMultiItemExpense(message, userPhone, parsed) {
     // Log as ONE shopping expense (default)
     const itemsList = items.map(item => `${item.description} (${item.amount})`).join(', ');
     
+    const userId = await getUserIdFromPhone(userPhone);
     await db.collection('expenses').add({
-      userId: userPhone,
+      userId: userId,
       amount: totalAmount,
       description: `Shopping: ${itemsList}`,
       category: 'Groceries',
@@ -458,6 +481,7 @@ async function handleDailyTotal(message, userPhone) {
 // SINGLE EXPENSE HANDLER
 // ========================================
 
+  const userId = await getUserIdFromPhone(userPhone);
 async function handleIntelligentExpense(message, userPhone, parsed) {
   const { amount, description, emotion } = parsed;
 
