@@ -480,13 +480,12 @@ async function handleDailyTotal(message, userPhone) {
 // ========================================
 // SINGLE EXPENSE HANDLER
 // ========================================
-
-  const userId = await getUserIdFromPhone(userPhone);
 async function handleIntelligentExpense(message, userPhone, parsed) {
+  const userId = await getUserIdFromPhone(userPhone);
   const { amount, description, emotion } = parsed;
 
   await db.collection('expenses').add({
-    userId: userPhone,
+    userId: userId,
     amount: amount,
     description: description,
     category: 'Other',
