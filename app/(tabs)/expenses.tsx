@@ -293,7 +293,14 @@ export default function ExpensesScreen() {
                   />
                 </View>
                 <View style={styles.expenseInfo}>
-                  <Text style={[styles.expenseCategory, { color: colors.text }]}>{expense.category}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={[styles.expenseCategory, { color: colors.text }]}>{expense.category}</Text>
+                    {expense.source === 'whatsapp' && (
+                      <View style={{ marginLeft: 6, backgroundColor: '#25D366', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
+                        <Icon name="logo-whatsapp" size={12} color="#fff" />
+                      </View>
+                    )}
+                  </View>
                   <Text style={[styles.expenseDescription, { color: colors.textSecondary }]}>
                     {expense.description}
                   </Text>
@@ -302,6 +309,8 @@ export default function ExpensesScreen() {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric',
+                    })}
+                </View>
                     })}
                   </Text>
                 </View>
