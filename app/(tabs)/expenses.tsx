@@ -310,9 +310,7 @@ export default function ExpensesScreen() {
                       month: 'short',
                       year: 'numeric',
                     })}
-                </View>
-                    })}
-                  </Text>
+                </Text>
                 </View>
               </View>
               <View style={styles.expenseRight}>

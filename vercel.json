@@ -1,4 +1,5 @@
 {
+  "name": "saveup-eight",
   "outputDirectory": "dist",
   "headers": [
     {
