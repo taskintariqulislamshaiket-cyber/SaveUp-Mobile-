@@ -29,6 +29,8 @@ const PERSONALITY_EMOJIS: Record<string, string> = {
   improviser: '🎭',
 };
 
+type TimePeriod = 'today' | 'week' | 'month' | '30days';
+
 export default function InsightsScreen() {
   const { user, userProfile } = useAuth();
   const { colors } = useTheme();
@@ -37,6 +39,8 @@ export default function InsightsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [insights, setInsights] = useState<any[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
+  const [currentMonthOffset, setCurrentMonthOffset] = useState(0);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -57,11 +61,44 @@ export default function InsightsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [user, userProfile]);
+  }, [user, userProfile, selectedPeriod, currentMonthOffset]);
+
+  const getFilteredExpenses = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    return expenses.filter(exp => {
+      const expDate = exp.date;
+      
+      switch (selectedPeriod) {
+        case 'today':
+          return expDate >= today;
+        case 'week':
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return expDate >= weekAgo;
+        case '30days':
+          const thirtyDaysAgo = new Date(today);
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          return expDate >= thirtyDaysAgo;
+        case 'month':
+        default:
+          const targetMonth = new Date(now.getFullYear(), now.getMonth() + currentMonthOffset, 1);
+          const targetYear = targetMonth.getFullYear();
+          const targetMonthNum = targetMonth.getMonth();
+          return expDate.getMonth() === targetMonthNum && expDate.getFullYear() === targetYear;
+      }
+    });
+  };
+
+  const getCurrentMonthName = () => {
+    const now = new Date();
+    const targetMonth = new Date(now.getFullYear(), now.getMonth() + currentMonthOffset, 1);
+    return targetMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
 
   const loadData = async () => {
     if (!user) return;
-
     try {
       const expensesQuery = query(
         collection(db, 'expenses'),
@@ -83,14 +120,8 @@ export default function InsightsScreen() {
       setExpenses(expensesData);
 
       if (userProfile) {
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        const monthlyExpenses = expensesData.filter(exp => {
-          const expDate = exp.date;
-          return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
-        });
-
-        const totalSpent = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+        const filteredExpenses = getFilteredExpenses();
+        const totalSpent = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
         const salaryDay = userProfile.salaryDay || 1;
         const today = new Date().getDate();
         
@@ -104,7 +135,7 @@ export default function InsightsScreen() {
           daysIntoMonth,
           daysUntilPayday,
           salaryDay,
-          expenses: monthlyExpenses,
+          expenses: filteredExpenses,
           personalityType: userProfile.personalityType || 'balanced',
         };
 
@@ -127,19 +158,35 @@ export default function InsightsScreen() {
     await loadData();
   };
 
+  const handlePeriodChange = async (period: TimePeriod) => {
+    if (Platform.OS !== 'web') {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setSelectedPeriod(period);
+    setCurrentMonthOffset(0);
+  };
+
+  const handleMonthChange = async (direction: 'prev' | 'next') => {
+    if (Platform.OS !== 'web') {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    
+    if (direction === 'prev') {
+      setCurrentMonthOffset(prev => prev - 1);
+    } else {
+      if (currentMonthOffset < 0) {
+        setCurrentMonthOffset(prev => prev + 1);
+      }
+    }
+  };
+
   const personalityEmoji = PERSONALITY_EMOJIS[userProfile?.personalityType || 'realist'] || '⚖️';
   const personalityName = userProfile?.personalityType ? 
     userProfile.personalityType.charAt(0).toUpperCase() + userProfile.personalityType.slice(1) : 
     'Realist';
 
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const monthlyExpenses = expenses.filter(exp => {
-    const expDate = exp.date;
-    return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
-  });
-
-  const totalSpent = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const filteredExpenses = getFilteredExpenses();
+  const totalSpent = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const monthlyIncome = userProfile?.monthlyIncome || 0;
   const spendingRate = monthlyIncome > 0 ? (totalSpent / monthlyIncome) * 100 : 0;
 
@@ -163,6 +210,72 @@ export default function InsightsScreen() {
         </TouchableOpacity>
       </Animated.View>
 
+      <Animated.View style={[styles.filterChipsContainer, { opacity: fadeAnim }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
+          <TouchableOpacity
+            style={[
+              styles.filterChip,
+              selectedPeriod === 'today' && styles.filterChipActive,
+              { 
+                backgroundColor: selectedPeriod === 'today' ? colors.primary : colors.surface,
+                borderColor: selectedPeriod === 'today' ? colors.primary : colors.border,
+              }
+            ]}
+            onPress={() => handlePeriodChange('today')}
+          >
+            <Text style={[styles.filterChipText, { color: selectedPeriod === 'today' ? '#fff' : colors.text }]}>Today</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterChip,
+              selectedPeriod === 'week' && styles.filterChipActive,
+              { backgroundColor: selectedPeriod === 'week' ? colors.primary : colors.surface, borderColor: selectedPeriod === 'week' ? colors.primary : colors.border }
+            ]}
+            onPress={() => handlePeriodChange('week')}
+          >
+            <Text style={[styles.filterChipText, { color: selectedPeriod === 'week' ? '#fff' : colors.text }]}>This Week</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterChip,
+              selectedPeriod === 'month' && styles.filterChipActive,
+              { backgroundColor: selectedPeriod === 'month' ? colors.primary : colors.surface, borderColor: selectedPeriod === 'month' ? colors.primary : colors.border }
+            ]}
+            onPress={() => handlePeriodChange('month')}
+          >
+            <Text style={[styles.filterChipText, { color: selectedPeriod === 'month' ? '#fff' : colors.text }]}>This Month</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterChip,
+              selectedPeriod === '30days' && styles.filterChipActive,
+              { backgroundColor: selectedPeriod === '30days' ? colors.primary : colors.surface, borderColor: selectedPeriod === '30days' ? colors.primary : colors.border }
+            ]}
+            onPress={() => handlePeriodChange('30days')}
+          >
+            <Text style={[styles.filterChipText, { color: selectedPeriod === '30days' ? '#fff' : colors.text }]}>30 Days</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </Animated.View>
+
+      {selectedPeriod === 'month' && (
+        <Animated.View style={[styles.monthNavigator, { backgroundColor: colors.surface, opacity: fadeAnim }]}>
+          <TouchableOpacity style={styles.monthNavButton} onPress={() => handleMonthChange('prev')}>
+            <Icon name="chevron-back" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <Text style={[styles.monthNavText, { color: colors.text }]}>{getCurrentMonthName()}</Text>
+          <TouchableOpacity 
+            style={[styles.monthNavButton, currentMonthOffset === 0 && styles.monthNavButtonDisabled]}
+            onPress={() => handleMonthChange('next')}
+            disabled={currentMonthOffset === 0}
+          >
+            <Icon name="chevron-forward" size={24} color={currentMonthOffset === 0 ? colors.textSecondary : colors.primary} />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -170,16 +283,7 @@ export default function InsightsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00D4A1" />
         }
       >
-        {/* Personality Card */}
-        <Animated.View 
-          style={[
-            styles.personalityCard,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
+        <Animated.View style={[styles.personalityCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.personalityGradient}>
             <Text style={styles.personalityCardEmoji}>{personalityEmoji}</Text>
             <Text style={styles.personalityCardTitle}>The {personalityName}</Text>
@@ -194,40 +298,24 @@ export default function InsightsScreen() {
               {!userProfile?.personalityType && 'Discover your money personality'}
             </Text>
             {!userProfile?.personalityType && (
-              <TouchableOpacity 
-                style={styles.takeQuizButton}
-                onPress={() => router.push('/quiz')}
-              >
+              <TouchableOpacity style={styles.takeQuizButton} onPress={() => router.push('/quiz')}>
                 <Text style={styles.takeQuizText}>Take the Quiz</Text>
               </TouchableOpacity>
             )}
           </LinearGradient>
         </Animated.View>
 
-        {/* Spending Overview */}
-        <Animated.View 
-          style={[
-            styles.overviewCard,
-            { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 },
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
+        <Animated.View style={[styles.overviewCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>📊 Spending Overview</Text>
           <View style={styles.overviewContent}>
             <View style={[styles.overviewItem, { backgroundColor: colors.background }]}>
-              <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>This Month</Text>
+              <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Total Spent</Text>
               <Text style={[styles.overviewValue, { color: colors.text }]}>৳{totalSpent.toFixed(0)}</Text>
-              <Text style={[styles.overviewHint, { color: colors.textSecondary }]}>{monthlyExpenses.length} transactions</Text>
+              <Text style={[styles.overviewHint, { color: colors.textSecondary }]}>{filteredExpenses.length} transactions</Text>
             </View>
             <View style={[styles.overviewItem, { backgroundColor: colors.background }]}>
               <Text style={[styles.overviewLabel, { color: colors.textSecondary }]}>Spending Rate</Text>
-              <Text style={[
-                styles.overviewValue,
-                { color: spendingRate > 80 ? '#ef4444' : spendingRate > 60 ? '#f59e0b' : '#10b981' }
-              ]}>
+              <Text style={[styles.overviewValue, { color: spendingRate > 80 ? '#ef4444' : spendingRate > 60 ? '#f59e0b' : '#10b981' }]}>
                 {spendingRate.toFixed(0)}%
               </Text>
               <Text style={[styles.overviewHint, { color: colors.textSecondary }]}>of income</Text>
@@ -235,43 +323,18 @@ export default function InsightsScreen() {
           </View>
         </Animated.View>
 
-        {/* Insights List */}
         {insights.length > 0 ? (
           insights.map((insight, index) => (
-            <Animated.View
-              key={insight.id}
-              style={[
-                styles.insightCard,
-                {
-                  opacity: fadeAnim,
-                  transform: [{
-                    translateX: fadeAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [100, 0],
-                    }),
-                  }],
-                }
-              ]}
-            >
+            <Animated.View key={insight.id} style={[styles.insightCard, { opacity: fadeAnim, transform: [{ translateX: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [100, 0] }) }] }]}>
               <LinearGradient
-                colors={
-                  insight.type === 'critical'
-                    ? ['#ef4444', '#dc2626']
-                    : insight.type === 'warning'
-                    ? ['#f59e0b', '#d97706']
-                    : insight.type === 'success'
-                    ? ['#10b981', '#059669']
-                    : ['#00D4A1', '#4CAF50']
-                }
+                colors={insight.type === 'critical' ? ['#ef4444', '#dc2626'] : insight.type === 'warning' ? ['#f59e0b', '#d97706'] : insight.type === 'success' ? ['#10b981', '#059669'] : ['#00D4A1', '#4CAF50']}
                 style={styles.insightGradient}
               >
                 <View style={styles.insightHeader}>
                   <Text style={styles.insightEmoji}>{insight.emoji}</Text>
                   <View style={styles.insightBadge}>
                     <Text style={styles.insightBadgeText}>
-                      {insight.type === 'critical' ? 'URGENT' : 
-                       insight.type === 'warning' ? 'WARNING' : 
-                       insight.type === 'success' ? 'GREAT JOB' : 'TIP'}
+                      {insight.type === 'critical' ? 'URGENT' : insight.type === 'warning' ? 'WARNING' : insight.type === 'success' ? 'GREAT JOB' : 'TIP'}
                     </Text>
                   </View>
                 </View>
@@ -283,14 +346,9 @@ export default function InsightsScreen() {
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🎯</Text>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No insights yet</Text>
-            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-              Start tracking expenses to get personalized insights
-            </Text>
-            <TouchableOpacity 
-              onPress={() => router.push('/(tabs)/expenses')}
-              style={styles.addExpenseButton}
-            >
+            <Text style={[styles.emptyText, { color: colors.text }]}>No insights yet</Text>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Start tracking expenses to get personalized insights</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/expenses')} style={styles.addExpenseButton}>
               <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.addExpenseGradient}>
                 <Text style={styles.addExpenseText}>Track Your First Expense</Text>
               </LinearGradient>
@@ -298,79 +356,20 @@ export default function InsightsScreen() {
           </View>
         )}
 
-        {/* Money Tips */}
         <View style={styles.tipsSection}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>💰 Money Tips for {personalityName}s</Text>
-          
-          {userProfile?.personalityType === 'guardian' && (
-            <>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>🛡️</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Build an emergency fund covering 6 months of expenses</Text>
-              </View>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>📊</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Consider low-risk investments like bonds or fixed deposits</Text>
-              </View>
-            </>
-          )}
-
-          {userProfile?.personalityType === 'strategist' && (
-            <>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>🧠</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Diversify investments across different asset classes</Text>
-              </View>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>📈</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Track your ROI and rebalance portfolio quarterly</Text>
-              </View>
-            </>
-          )}
-
-          {userProfile?.personalityType === 'realist' && (
-            <>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>⚖️</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Follow the 50/30/20 rule: needs, wants, savings</Text>
-              </View>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>💡</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Review your budget monthly and adjust as needed</Text>
-              </View>
-            </>
-          )}
-
-          {userProfile?.personalityType === 'enjoyer' && (
-            <>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>🎉</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Set aside a "fun money" budget to enjoy guilt-free</Text>
-              </View>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>🎯</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Automate savings so you can spend the rest freely</Text>
-              </View>
-            </>
-          )}
-
-          {(!userProfile?.personalityType || 
-            !['guardian', 'strategist', 'realist', 'enjoyer'].includes(userProfile?.personalityType)) && (
-            <>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>💡</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Track every expense to understand your spending patterns</Text>
-              </View>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>🎯</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Set clear financial goals and review them monthly</Text>
-              </View>
-              <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
-                <Text style={styles.tipIcon}>��</Text>
-                <Text style={[styles.tipText, { color: colors.text }]}>Save at least 20% of your income consistently</Text>
-              </View>
-            </>
-          )}
+          <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
+            <Text style={styles.tipIcon}>💡</Text>
+            <Text style={[styles.tipText, { color: colors.text }]}>Track every expense to understand your spending patterns</Text>
+          </View>
+          <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
+            <Text style={styles.tipIcon}>🎯</Text>
+            <Text style={[styles.tipText, { color: colors.text }]}>Set clear financial goals and review them monthly</Text>
+          </View>
+          <View style={[styles.tipCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}>
+            <Text style={styles.tipIcon}>💰</Text>
+            <Text style={[styles.tipText, { color: colors.text }]}>Save at least 20% of your income consistently</Text>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -385,6 +384,15 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, marginTop: 4 },
   personalityBadge: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', borderWidth: 3 },
   personalityEmoji: { fontSize: 32 },
+  filterChipsContainer: { paddingHorizontal: 20, marginBottom: 16 },
+  filterChipsScroll: { paddingRight: 20 },
+  filterChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, borderWidth: 2 },
+  filterChipActive: { shadowColor: '#00D4A1', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
+  filterChipText: { fontSize: 13, fontWeight: '600' },
+  monthNavigator: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 20, marginBottom: 16, padding: 12, borderRadius: 12 },
+  monthNavButton: { padding: 8 },
+  monthNavButtonDisabled: { opacity: 0.3 },
+  monthNavText: { fontSize: 15, fontWeight: '600' },
   personalityCard: { marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden' },
   personalityGradient: { padding: 32, alignItems: 'center' },
   personalityCardEmoji: { fontSize: 64, marginBottom: 16 },

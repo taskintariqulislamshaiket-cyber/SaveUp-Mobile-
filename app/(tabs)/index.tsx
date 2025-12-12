@@ -27,50 +27,21 @@ import DailySpendingChart from '../../src/components/DailySpendingChart';
 import CategoryPieChart from '../../src/components/CategoryPieChart';
 
 const PERSONALITY_TYPES = {
-  starter: {
-    title: "The Starter",
-    emoji: "🌱",
-    description: "Every journey begins with a single step. Set up your income to unlock insights!",
-    tip: "Complete your profile to see your money personality!",
-    gradient: ['#10b981', '#34d399'],
-  },
-  saver: {
-    title: "The Saver",
-    emoji: "🐿️",
-    description: "You're amazing at keeping money aside. Your future self will thank you!",
-    tip: "You're a natural saver. Consider investing for even better returns!",
-    gradient: ['#00D4A1', '#4CAF50'],
-  },
-  strategist: {
-    title: "The Strategist",
-    emoji: "🦊",
-    description: "You're sharp. You know money is a tool, not just numbers.",
-    tip: "Research wisely, invest smartly. Your brain is your best asset!",
-    gradient: ['#f59e0b', '#f97316'],
-  },
-  balanced: {
-    title: "The Balanced",
-    emoji: "⚖️",
-    description: "Perfect balance between enjoying today and securing tomorrow.",
-    tip: "Balance is key. Keep up the great work!",
-    gradient: ['#06b6d4', '#0891b2'],
-  },
-  enjoyer: {
-    title: "The Enjoyer",
-    emoji: "🦄",
-    description: "Life is too short! Money means experiences, not just savings.",
-
-    tip: "Balance is key. Enjoy today, but plan for tomorrow too!",
-    gradient: ['#ec4899', '#f43f5e'],
-  },
-  riskTaker: {
-    title: "The Risk-Taker",
-    emoji: "🎲",
-    description: "You're living on the edge! Time to slow down a bit.",
-    tip: "Slow down! You've spent most of your budget this month.",
-    gradient: ['#ef4444', '#dc2626'],
-  },
+  starter: { title: "The Starter", emoji: "🌱", description: "Every journey begins with a single step. Set up your income to unlock insights!", tip: "Complete your profile to see your money personality!", gradient: ['#10b981', '#34d399'] },
+  saver: { title: "The Saver", emoji: "🐿️", description: "You're amazing at keeping money aside. Your future self will thank you!", tip: "You're a natural saver. Consider investing for even better returns!", gradient: ['#00D4A1', '#4CAF50'] },
+  strategist: { title: "The Strategist", emoji: "🦊", description: "You're sharp. You know money is a tool, not just numbers.", tip: "Research wisely, invest smartly. Your brain is your best asset!", gradient: ['#f59e0b', '#f97316'] },
+  balanced: { title: "The Balanced", emoji: "⚖️", description: "Perfect balance between enjoying today and securing tomorrow.", tip: "Balance is key. Keep up the great work!", gradient: ['#06b6d4', '#0891b2'] },
+  enjoyer: { title: "The Enjoyer", emoji: "🦄", description: "Life is too short! Money means experiences, not just savings.", tip: "Balance is key. Enjoy today, but plan for tomorrow too!", gradient: ['#ec4899', '#f43f5e'] },
+  riskTaker: { title: "The Risk-Taker", emoji: "��", description: "You're living on the edge! Time to slow down a bit.", tip: "Slow down! You've spent most of your budget this month.", gradient: ['#ef4444', '#dc2626'] },
 };
+
+const ACCOUNT_TYPES = [
+  { id: 'cash', name: 'Cash', icon: 'cash-outline', color: '#10b981' },
+  { id: 'bkash', name: 'bKash', icon: 'phone-portrait-outline', color: '#e91e63' },
+  { id: 'nagad', name: 'Nagad', icon: 'wallet-outline', color: '#ff9800' },
+  { id: 'rocket', name: 'Rocket', icon: 'rocket-outline', color: '#9c27b0' },
+  { id: 'bank', name: 'Bank', icon: 'business-outline', color: '#2196f3' },
+];
 
 export default function Dashboard() {
   const { user, userProfile } = useAuth();
@@ -81,6 +52,7 @@ export default function Dashboard() {
   const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -88,60 +60,29 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData();
-    
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
     ]).start();
-
-    Animated.loop(
-      Animated.timing(logoRotate, {
-        toValue: 1,
-        duration: 20000,
-        useNativeDriver: true,
-      })
-    ).start();
+    Animated.loop(Animated.timing(logoRotate, { toValue: 1, duration: 20000, useNativeDriver: true })).start();
   }, [user]);
 
-  const logoSpin = logoRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  const logoSpin = logoRotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   const loadData = async () => {
     if (!user) return;
     try {
-      const expensesQuery = query(
-        collection(db, 'expenses'),
-        where('userId', '==', user.uid),
-        orderBy('date', 'desc')
-      );
+      const expensesQuery = query(collection(db, 'expenses'), where('userId', '==', user.uid), orderBy('date', 'desc'));
       const expensesSnapshot = await getDocs(expensesQuery);
-      const expensesData = expensesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        date: doc.data().date?.toDate() || new Date(),
-      }));
+      const expensesData = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), date: doc.data().date?.toDate() || new Date() }));
       setExpenses(expensesData);
 
-      const goalsQuery = query(
-        collection(db, 'goals'),
-        where('userId', '==', user.uid)
-      );
+      const goalsQuery = query(collection(db, 'goals'), where('userId', '==', user.uid));
       const goalsSnapshot = await getDocs(goalsQuery);
-      const goalsData = goalsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const goalsData = goalsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setGoals(goalsData);
+
+      calculateAccountBalances(expensesData);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -150,27 +91,33 @@ export default function Dashboard() {
     }
   };
 
+  const calculateAccountBalances = (expensesData: any[]) => {
+    const selectedAccounts = userProfile?.selectedAccounts || ['cash', 'bkash', 'nagad'];
+    const initialBalances = userProfile?.accountBalances || {};
+    const balances: Record<string, number> = { ...initialBalances };
+    expensesData.forEach(expense => {
+      const account = expense.account || 'cash';
+      if (balances[account] !== undefined) {
+        balances[account] -= expense.amount;
+      }
+    });
+    setAccountBalances(balances);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    if (Platform.OS !== 'web') {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+    if (Platform.OS !== 'web') await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await loadData();
   };
 
   const getPetEmoji = () => {
     if (!petState?.selectedPetType) return '🥚';
-    const petEmojis: Record<string, string> = {
-      cat: '🐱', dog: '🐶', fox: '🦊', bear: '🐻', owl: '🦉',
-      rabbit: '🐰', panda: '🐼', raccoon: '🦝', dragon: '🐉', unicorn: '🦄',
-    };
+    const petEmojis: Record<string, string> = { cat: '🐱', dog: '🐶', fox: '🦊', bear: '🐻', owl: '🦉', rabbit: '🐰', panda: '🐼', raccoon: '🦝', dragon: '🐉', unicorn: '🦄' };
     return petEmojis[petState.selectedPetType] || '🥚';
   };
 
-  const navigateToPet = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+  const navigateToPet = async () => {
+    if (Platform.OS !== 'web') await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/(tabs)/pet');
   };
 
@@ -185,35 +132,25 @@ export default function Dashboard() {
 
   const monthlyIncome = userProfile?.monthlyIncome || 0;
   const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long' });
-  
-  const thisMonthExpenses = expenses
-    .filter(exp => {
-      const expDate = new Date(exp.date);
-      const now = new Date();
-      return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
-    })
-    .reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  const thisMonthExpenses = expenses.filter(exp => {
+    const expDate = new Date(exp.date);
+    const now = new Date();
+    return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
+  }).reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
   const moneyLeft = monthlyIncome - thisMonthExpenses;
   const spentPercentage = monthlyIncome > 0 ? (thisMonthExpenses / monthlyIncome) * 100 : 0;
   const moneyHealth = Math.max(0, Math.round((moneyLeft / monthlyIncome) * 100));
-
   const insights = calculateInsights(expenses);
 
   const getDaysUntilSalary = () => {
     const today = new Date();
     const currentDay = today.getDate();
     const salaryDay = userProfile?.salaryDay || 1;
-    
-    if (currentDay < salaryDay) {
-      return salaryDay - currentDay;
-    } else if (currentDay === salaryDay) {
-      return 0;
-    } else {
-      const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, salaryDay);
-      const diffTime = nextMonth.getTime() - today.getTime();
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
+    if (currentDay < salaryDay) return salaryDay - currentDay;
+    if (currentDay === salaryDay) return 0;
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, salaryDay);
+    return Math.ceil((nextMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   const daysUntilSalary = getDaysUntilSalary();
@@ -230,21 +167,13 @@ export default function Dashboard() {
   const personality = getPersonality();
   const recentExpenses = expenses.slice(0, 5);
   const topGoals = goals.slice(0, 3);
-
-  const totalWealth = (userProfile?.existingSavings || 0) + 
-                      (userProfile?.existingFDR || 0) + 
-                      (userProfile?.otherInvestments || 0);
-
+  const totalWealth = (userProfile?.existingSavings || 0) + (userProfile?.existingFDR || 0) + (userProfile?.otherInvestments || 0);
+  const selectedAccounts = userProfile?.selectedAccounts || ['cash', 'bkash', 'nagad'];
+  const userAccounts = ACCOUNT_TYPES.filter(acc => selectedAccounts.includes(acc.id));
+  const totalBalance = Object.values(accountBalances).reduce((sum, balance) => sum + balance, 0);
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00D4A1" />
-        }
-      >
-        {/* SaveUp Logo Header with Pet Widget */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00D4A1" />}>
         <Animated.View style={[styles.logoHeader, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.logoContainer}>
             <Animated.View style={{ transform: [{ rotate: logoSpin }] }}>
@@ -256,8 +185,6 @@ export default function Dashboard() {
               <Text style={[styles.logoText, { color: colors.text }]}>SaveUp</Text>
               <Text style={[styles.logoSubtext, { color: colors.textSecondary }]}>Bangladesh's smartest money tracker</Text>
             </View>
-            
-            {/* Mini Pet Widget */}
             <TouchableOpacity onPress={navigateToPet} style={[styles.petMini, { backgroundColor: colors.surface }]}>
               <Text style={styles.petEmoji}>{getPetEmoji()}</Text>
               <View style={styles.gemBadge}>
@@ -267,7 +194,39 @@ export default function Dashboard() {
           </View>
         </Animated.View>
 
-        {/* Personality Hero */}
+        <Animated.View style={[styles.accountsSection, { opacity: fadeAnim }]}>
+          <Text style={[styles.accountsSectionTitle, { color: colors.text }]}>💳 Your Accounts</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountsScroll}>
+            <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.accountCard}>
+              <View style={styles.accountCardHeader}>
+                <Icon name="wallet" size={24} color="#fff" />
+                <Text style={styles.accountCardLabel}>Total Balance</Text>
+              </View>
+              <Text style={styles.accountCardAmount}>৳{totalBalance.toLocaleString('en-BD')}</Text>
+              <Text style={styles.accountCardHint}>Across all accounts</Text>
+            </LinearGradient>
+
+            {userAccounts.map(account => (
+              <TouchableOpacity
+                key={account.id}
+                style={[styles.accountCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}
+                onPress={async () => {
+                  if (Platform.OS !== 'web') await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+              >
+                <View style={styles.accountCardHeader}>
+                  <View style={[styles.accountIconCircle, { backgroundColor: account.color + '20' }]}>
+                    <Icon name={account.icon} size={20} color={account.color} />
+                  </View>
+                  <Text style={[styles.accountCardLabel, { color: colors.text }]}>{account.name}</Text>
+                </View>
+                <Text style={[styles.accountCardAmount, { color: colors.text }]}>৳{(accountBalances[account.id] || 0).toLocaleString('en-BD')}</Text>
+                <Text style={[styles.accountCardHint, { color: colors.textSecondary }]}>Current balance</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
         <Animated.View style={[styles.personalityHero, { opacity: fadeAnim }]}>
           <LinearGradient colors={personality.gradient} style={styles.personalityGradient}>
             <Text style={styles.personalityEmoji}>{personality.emoji}</Text>
@@ -280,7 +239,6 @@ export default function Dashboard() {
           </LinearGradient>
         </Animated.View>
 
-        {/* Big Stats */}
         <View style={styles.statsGrid}>
           <View style={styles.statRow}>
             <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.statCard}>
@@ -289,54 +247,38 @@ export default function Dashboard() {
               <Text style={styles.statValue}>৳{(monthlyIncome ?? 0).toLocaleString('en-BD')}</Text>
               <Text style={styles.statHint}>Keep it rolling!</Text>
             </LinearGradient>
-
             <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.statCard}>
               <Text style={styles.statEmoji}>🔥</Text>
               <Text style={styles.statLabel}>SPENT SO FAR</Text>
               <Text style={styles.statValue}>৳{(thisMonthExpenses ?? 0).toLocaleString('en-BD')}</Text>
-              <Text style={styles.statHint}>
-                {spentPercentage < 50 ? "You're crushing it! 💪" : "Doing great!"}
-              </Text>
+              <Text style={styles.statHint}>{spentPercentage < 50 ? "You're crushing it! 💪" : "Doing great!"}</Text>
             </LinearGradient>
           </View>
-
           <View style={styles.statRow}>
             <LinearGradient colors={['#10b981', '#059669']} style={styles.statCard}>
               <Text style={styles.statEmoji}>😎</Text>
               <Text style={styles.statLabel}>LEFT TO SPEND</Text>
-              <Text style={[styles.statValue, { color: moneyLeft < 0 ? '#fee2e2' : '#fff' }]}>
-                ৳{(moneyLeft ?? 0).toLocaleString('en-BD')}
-              </Text>
-              <Text style={styles.statHint}>
-                {moneyLeft < 0 ? "Overspent this month" : "Keep going!"}
-              </Text>
+              <Text style={[styles.statValue, { color: moneyLeft < 0 ? '#fee2e2' : '#fff' }]}>৳{(moneyLeft ?? 0).toLocaleString('en-BD')}</Text>
+              <Text style={styles.statHint}>{moneyLeft < 0 ? "Overspent this month" : "Keep going!"}</Text>
             </LinearGradient>
-
             <LinearGradient colors={['#ec4899', '#db2777']} style={styles.statCard}>
               <Text style={styles.statEmoji}>✨</Text>
               <Text style={styles.statLabel}>MONEY HEALTH</Text>
               <Text style={styles.statValue}>{(moneyHealth ?? 0)}%</Text>
-              <Text style={styles.statHint}>
-                {moneyHealth >= 70 ? "You're a pro!" : "Keep it up!"}
-              </Text>
+              <Text style={styles.statHint}>{moneyHealth >= 70 ? "You're a pro!" : "Keep it up!"}</Text>
             </LinearGradient>
           </View>
         </View>
 
-        {/* Payday Banner */}
         <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.paydayBanner}>
-          <Text style={styles.paydayTitle}>
-            {daysUntilSalary === 0 ? '🎉 Salary Day!' : `${daysUntilSalary} days until payday`}
-          </Text>
+          <Text style={styles.paydayTitle}>{daysUntilSalary === 0 ? '🎉 Salary Day!' : `${daysUntilSalary} days until payday`}</Text>
           <Text style={styles.paydaySubtitle}>Save smart, live fully ✨</Text>
         </LinearGradient>
 
-        {/* Smart Insights Section */}
         <WeeklyInsightsCard insights={insights} />
         <DailySpendingChart data={insights.dailyData} />
         <CategoryPieChart data={insights.byCategory} />
 
-        {/* Safety Net */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>🛡️ Your Safety Net</Text>
           <View style={styles.safetyGrid}>
@@ -354,11 +296,10 @@ export default function Dashboard() {
           <LinearGradient colors={['#00D4A1', '#4CAF50']} style={styles.totalWealthCard}>
             <Text style={styles.totalWealthLabel}>Total Wealth</Text>
             <Text style={styles.totalWealthValue}>৳{(totalWealth ?? 0).toLocaleString('en-BD')}</Text>
-            <Text style={styles.totalWealthDesc}>Building your future! ��</Text>
+            <Text style={styles.totalWealthDesc}>Building your future! 🚀</Text>
           </LinearGradient>
         </View>
 
-        {/* Goals Preview */}
         {topGoals.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -376,10 +317,7 @@ export default function Dashboard() {
                     <Text style={styles.goalProgress}>{Math.round(progress)}%</Text>
                   </View>
                   <View style={[styles.goalProgressBar, { backgroundColor: colors.border }]}>
-                    <LinearGradient
-                      colors={['#00D4A1', '#4CAF50']}
-                      style={[styles.goalProgressFill, { width: `${Math.min(progress, 100)}%` }]}
-                    />
+                    <LinearGradient colors={['#00D4A1', '#4CAF50']} style={[styles.goalProgressFill, { width: `${Math.min(progress, 100)}%` }]} />
                   </View>
                   <View style={styles.goalFooter}>
                     <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>৳{(goal.saved ?? 0).toLocaleString('en-BD')}</Text>
@@ -391,7 +329,6 @@ export default function Dashboard() {
           </View>
         )}
 
-        {/* Recent Expenses */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>💸 Where'd Your Money Go?</Text>
@@ -399,7 +336,6 @@ export default function Dashboard() {
               <Text style={styles.seeAll}>See All →</Text>
             </TouchableOpacity>
           </View>
-
           {recentExpenses.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>🤷</Text>
@@ -412,10 +348,7 @@ export default function Dashboard() {
                 <View style={styles.expenseLeft}>
                   <Text style={[styles.expenseCategory, { color: colors.text }]}>{expense.category}</Text>
                   <Text style={[styles.expenseDate, { color: colors.textSecondary }]}>
-                    {new Date(expense.date).toLocaleDateString('en-GB', { 
-                      day: 'numeric', 
-                      month: 'short' 
-                    })}
+                    {new Date(expense.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                   </Text>
                 </View>
                 <Text style={styles.expenseAmount}>-৳{(expense.amount ?? 0).toLocaleString('en-BD')}</Text>
@@ -423,7 +356,6 @@ export default function Dashboard() {
             ))
           )}
         </View>
-
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -438,13 +370,21 @@ const styles = StyleSheet.create({
   logoHeader: { padding: 20, paddingTop: 60 },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   logoCircle: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  logoEmoji: { fontSize: 28 },
   logoText: { fontSize: 24, fontWeight: 'bold' },
   logoSubtext: { fontSize: 11 },
   petMini: { padding: 10, borderRadius: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   petEmoji: { fontSize: 32 },
   gemBadge: { marginTop: 4 },
   gemText: { fontSize: 10, fontWeight: 'bold', color: '#00D4A1' },
+  accountsSection: { paddingHorizontal: 20, marginBottom: 20 },
+  accountsSectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  accountsScroll: { paddingRight: 20 },
+  accountCard: { width: 160, padding: 16, borderRadius: 16, marginRight: 12, minHeight: 120 },
+  accountCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  accountIconCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  accountCardLabel: { fontSize: 12, color: '#fff', opacity: 0.9, fontWeight: '600' },
+  accountCardAmount: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 4 },
+  accountCardHint: { fontSize: 10, color: '#fff', opacity: 0.8 },
   personalityHero: { marginHorizontal: 20, marginBottom: 20, borderRadius: 24, overflow: 'hidden' },
   personalityGradient: { padding: 32, alignItems: 'center' },
   personalityEmoji: { fontSize: 64, marginBottom: 12 },
